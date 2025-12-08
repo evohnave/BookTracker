@@ -1,40 +1,22 @@
-<!DOCTYPE html>
-<html>
-<head><title>BookTracker</title>
-<style>
-body {font-family:system-ui;margin:40px;background:#f9f9f9;line-height:1.6;}
-input,button {padding:10px 16px;font-size:16px;border-radius:6px;border:1px solid #ccc;}
-img {max-height:140px;border-radius:8px;box-shadow:0 2px 8px rgba(0,0,0,0.1);}
-li {background:white;padding:16px;margin:12px 0;border-radius:10px;display:flex;align-items:center;}
-.actions button {margin-left:8px;padding:6px 12px;font-size:14px;}
-a button {background:#0066cc;color:white;border:none;}
-</style>
-</head>
-<body>
-<h1>My Books ({{ books|length }})</h1>
-<form><input name="q" value="{{ q }}" placeholder="Search title/author/ISBN/LCCN" size="60">
-<button type="submit">Search</button></form>
-<a href="/add"><button>Add Book</button></a><hr>
-{% if not books %}
-<p>No books yet.</p>
-{% else %}
-<ul style="list-style:none;padding:0">
 {% for b in books %}
 <li>
-<img src="{{ b.cover_url or 'https://via.placeholder.com/100x150.png?text=No+Cover' }}">
-<div style="margin-left:20px">
-<strong style="font-size:1.3em">{{ b.title }}</strong><br>{{ b.author }}<br>
-<small>{% if b.isbn13 %}ISBN-13: {{ b.isbn13 }} {% endif %}
-{% if b.isbn10 %}ISBN-10: {{ b.isbn10 }} {% endif %}
-{% if b.lccn %}LCCN: {{ b.lccn }}{% endif %}</small><br>
-<div class="actions">
-<a href="/edit/{{ b.id }}"><button>Edit</button></a>
-<a href="/delete/{{ b.id }}" onclick="return confirm('Delete {{ b.title }}?')"><button style="background:#c33;color:white">Delete</button></a>
-</div>
-</div>
+    <img src="{{ b.cover_url or 'https://via.placeholder.com/100x150.png?text=No+Cover' }}">
+    <div style="margin-left:20px">
+        <strong style="font-size:1.3em">
+            {{ b.title }}{% if b.copies > 1 %} ({{ b.copies }} copies){% endif %}
+        </strong><br>
+        {{ b.author }}<br>
+        <small>
+            {% if b.isbn13 %}ISBN-13: {{ b.isbn13 }} {% endif %}
+            {% if b.isbn10 %}ISBN-10: {{ b.isbn10 }} {% endif %}
+            {% if b.lccn %}LCCN: {{ b.lccn }}{% endif %}
+        </small><br>
+        <div class="actions">
+            <a href="/edit/{{ b.id }}"><button>Edit</button></a>
+            <a href="/delete/{{ b.id }}" onclick="return confirm('Delete {{ b.title }}?')">
+                <button style="background:#c33;color:white">Delete</button>
+            </a>
+        </div>
+    </div>
 </li>
 {% endfor %}
-</ul>
-{% endif %}
-</body>
-</html>
