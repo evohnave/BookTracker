@@ -1,11 +1,26 @@
 <!DOCTYPE html>
-<html><head><title>Edit Book</title><style>body{font-family:system-ui;margin:40px}</style></head><body>
+<html>
+<head>
+    <title>Edit Book - BookTracker</title>
+    <style>
+        body {font-family:system-ui;margin:40px;background:#f9f9f9;}
+        input, button {padding:10px 16px;font-size:16px;border-radius:6px;margin:5px 0;}
+        label {display:inline-block;width:140px;font-weight:bold;}
+    </style>
+</head>
+<body>
 <h1>Edit Book</h1>
+
 <form method="post">
-<p>Title: <input name="title" value="{{ book.title }}" size="70" required></p>
-<p>Author: <input name="author" value="{{ book.author }}" size="70" required></p>
-<p>ISBN-13: <input name="isbn13" value="{{ book.isbn13 or '' }}" size="20"></p>
-<p>ISBN-10: <input name="isbn10" value="{{ book.isbn10 or '' }}" size="20"></p>
-<p>LCCN: <input name="lccn" value="{{ book.lccn or '' }}" size="20"></p>
-<button type="submit">Update</button> <a href="/">Cancel</a>
-</form></body></html>
+    <p><label>Title:</label>     <input name="title" value="{{ book.title }}" size="70" required></p>
+    <p><label>Author:</label>    <input name="author" value="{{ book.author }}" size="70" required></p>
+    <p><label>ISBN-13:</label>   <input name="isbn13" value="{{ book.isbn13 or '' }}" size="20"></p>
+    <p><label>ISBN-10:</label>   <input name="isbn10" value="{{ book.isbn10 or '' }}" size="20"></p>
+    <p><label>LCCN:</label>      <input name="lccn" value="{{ book.lccn or '' }}" size="20"></p>
+    <p><label>Copies:</label>    <input name="copies" type="number" min="1" value="{{ book.copies }}" required></p>
+
+    <button type="submit">Update Book</button>
+    <a href="/">Cancel</a>
+</form>
+</body>
+</html>

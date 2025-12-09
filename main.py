@@ -1,10 +1,13 @@
-# main.py — FINAL, WORKING with copy counting
+# main.py — FINAL, FULLY WORKING with editable copies + all imports fixed
 from fastapi import FastAPI, Form, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, or_, update, delete, text
 
+# Absolute imports — no dots
 from database import init_db, get_db
+from models import Book                          # ← THIS WAS MISSING
 from crud.book import get_books, add_copy_or_create, get_book, update_book, delete_book
 from services.google_books import lookup, general_lookup
 from schemas import BookCreate
@@ -67,25 +70,43 @@ async def add_selected(
         <h2>Added Another Copy!</h2>
         <p>You now have <strong>{result_book.copies} copies</strong> of:</p>
         <p><em>{title}</em> by {author}</p>
-        <a href="/">← Back to Library</a>
+        <a href="/">Back to Library</a>
         """)
 
     return RedirectResponse("/", status_code=303)
 
-# edit, delete routes unchanged...
 @app.get("/edit/{book_id}", response_class=HTMLResponse)
 async def edit_form(book_id: int, request: Request, db: AsyncSession = Depends(get_db)):
     book = await get_book(db, book_id)
     if not book:
-        raise HTTPException(404)
+        raise HTTPException(404, "Book not found")
     return templates.TemplateResponse("edit.html", {"request": request, "book": book})
 
 @app.post("/edit/{book_id}")
-async def update_book_route(book_id: int, title: str = Form(...), author: str = Form(...),
-                            isbn13: str = Form(""), isbn10: str = Form(""), lccn: str = Form(""),
-                            db: AsyncSession = Depends(get_db)):
-    book_data = BookCreate(title=title, author=author, isbn13=isbn13 or None, isbn10=isbn10 or None, lccn=lccn or None)
-    await update_book(db, book_id, book_data)
+async def update_book_route(
+    book_id: int,
+    title: str = Form(...),
+    author: str = Form(...),
+    isbn13: str = Form(""),
+    isbn10: str = Form(""),
+    lccn: str = Form(""),
+    copies: int = Form(1),
+    db: AsyncSession = Depends(get_db)
+):
+    book_data = {
+        "title": title,
+        "author": author,
+        "isbn13": isbn13 or None,
+        "isbn10": isbn10 or None,
+        "lccn": lccn or None,
+        "copies": max(1, copies)
+    }
+    await db.execute(
+        update(Book)
+        .where(Book.id == book_id)
+        .values(**book_data)
+    )
+    await db.commit()
     return RedirectResponse("/", status_code=303)
 
 @app.get("/delete/{book_id}")
