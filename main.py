@@ -25,7 +25,11 @@ async def home(request: Request, q: str = "", db: AsyncSession = Depends(get_db)
 
 @app.get("/add", response_class=HTMLResponse)
 async def add_form(request: Request):
-    return templates.TemplateResponse("add.html", {"request": request})
+    # Always provide a default empty query dict so template never fails
+    return templates.TemplateResponse("add.html", {
+        "request": request,
+        "query": {"title": "", "author": "", "isbn": "", "lccn": ""}
+    })
 
 @app.post("/lookup", response_class=HTMLResponse)
 async def lookup_books(
