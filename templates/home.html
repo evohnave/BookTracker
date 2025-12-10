@@ -6,8 +6,12 @@
         body {font-family:system-ui;margin:40px;background:#f9f9f9;line-height:1.6;}
         input,button {padding:10px 16px;font-size:16px;border-radius:6px;}
         img {max-height:140px;border-radius:8px;box-shadow:0 2px 8px #0002;}
-        li {background:white;padding:16px;margin:12px 0;border-radius:10px;display:flex;align-items:center;}
-        a button {background:#0066cc;color:white;border:none;}
+        li {background:white;padding:20px;margin:15px 0;border-radius:12px;display:flex;align-items:flex-start;}
+        .info {margin-left:20px;flex:1;}
+        .meta {font-size:0.9em;color:#555;margin:8px 0;}
+        .price {font-weight:bold;color:#d32;}
+        a button {background:#0066cc;color:white;border:none;padding:8px 16px;border-radius:6px;}
+        .actions button {margin-left:8px;padding:6px 12px;font-size:14px;}
     </style>
 </head>
 <body>
@@ -16,7 +20,9 @@
         <input name="q" value="{{ q }}" placeholder="Search title/author/ISBN/LCCN" size="60">
         <button type="submit">Search</button>
     </form>
-    <a href="/add"><button>Add Book</button></a><hr>
+    <a href="/add"><button>Add Book</button></a>
+    <hr>
+
     {% if not books %}
         <p>No books yet — <a href="/add">add one</a>!</p>
     {% else %}
@@ -24,17 +30,28 @@
         {% for b in books %}
             <li>
                 <img src="{{ b.cover_url or 'https://via.placeholder.com/100x150.png?text=No+Cover' }}">
-                <div style="margin-left:20px">
-                    <strong style="font-size:1.3em">
+                <div class="info">
+                    <strong style="font-size:1.4em">
                         {{ b.title }}{% if b.copies > 1 %} ({{ b.copies }} copies){% endif %}
                     </strong><br>
-                    {{ b.author }}<br>
+                    by {{ b.author }}<br>
+
+                    <div class="meta">
+                        {% if b.purchase_price %}
+                            <span class="price">Paid: ${{ "%.2f"|format(b.purchase_price) }}</span>
+                            {% if b.date_purchased %} on {{ b.date_purchased }}{% endif %}
+                        {% endif %}
+                        {% if b.date_read %} • Read: {{ b.date_read }}{% endif %}
+                        {% if b.comment %} • <em>{{ b.comment }}</em>{% endif %}
+                    </div>
+
                     <small>
                         {% if b.isbn13 %}ISBN-13: {{ b.isbn13 }} {% endif %}
                         {% if b.isbn10 %}ISBN-10: {{ b.isbn10 }} {% endif %}
                         {% if b.lccn %}LCCN: {{ b.lccn }}{% endif %}
                     </small><br>
-                    <div style="margin-top:8px">
+
+                    <div class="actions" style="margin-top:10px">
                         <a href="/edit/{{ b.id }}"><button>Edit</button></a>
                         <a href="/delete/{{ b.id }}" onclick="return confirm('Delete {{ b.title }}?')">
                             <button style="background:#c33;color:white">Delete</button>
