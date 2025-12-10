@@ -37,9 +37,16 @@ async def lookup_books(
     db: AsyncSession = Depends(get_db)
 ):
     results = await general_lookup(title=title.strip(), author=author.strip(), isbn=isbn.strip(), lccn=lccn.strip())
+    if not results:
+        # No results → go back to add page with data preserved
+        return templates.TemplateResponse("add.html", {
+            "request": request,
+            "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn},
+            "error": "No books found — add manually below"
+        })
     return templates.TemplateResponse("lookup.html", {
         "request": request,
-        "results": results or [],
+        "results": results,
         "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn}
     })
 
@@ -134,5 +141,47 @@ async def update_book_route(
 @app.get("/delete/{book_id}")
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):
     await delete_book(db, book_id)
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/add_manual")
+async def add_manual(
+    title: str = Form(...),
+    author: str = Form(...),
+    isbn13: str = Form(""),
+    isbn10: str = Form(""),
+    lccn: str = Form(""),
+    copies: int = Form(1),
+    purchase_price: str = Form(""),
+    date_purchased: str = Form(""),
+    date_read: str = Form(""),
+    comment: str = Form(""),
+    db: AsyncSession = Depends(get_db)
+):
+    from decimal import Decimal
+    from datetime import date
+
+    price = Decimal(purchase_price) if purchase_price else None
+    try:
+        purchased = date.fromisoformat(date_purchased) if date_purchased else None
+    except ValueError:
+        purchased = None
+    try:
+        read = date.fromisoformat(date_read) if date_read else None
+    except ValueError:
+        read = None
+
+    book_data = BookCreate(
+        title=title,
+        author=author,
+        isbn13=isbn13 or None,
+        isbn10=isbn10 or None,
+        lccn=lccn or None,
+        copies=max(1, copies),
+        purchase_price=price,
+        date_purchased=purchased,
+        date_read=read,
+        comment=comment or None
+    )
+    await add_copy_or_create(db, book_data)
     return RedirectResponse("/", status_code=303)
 
