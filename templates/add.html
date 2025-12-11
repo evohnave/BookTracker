@@ -31,6 +31,7 @@
     <p><label>ISBN-10:</label>    <input name="isbn10" size="20"></p>
     <p><label>LCCN:</label>       <input name="lccn" size="20" value="{{ query.lccn or '' }}"></p>
     <p><label>Copies:</label>     <input name="copies" type="number" min="1" value="1" required></p>
+    <p><label>Cover URL:</label> <input name="cover_url" size="70" placeholder="https://example.com/cover.jpg (optional)"></p>
 
     <h4>Personal Info</h4>
     <p><label>Price Paid ($):</label> <input name="purchase_price" type="number" step="0.01" placeholder="24.99"></p>

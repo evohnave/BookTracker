@@ -1,32 +1,78 @@
 <!DOCTYPE html>
 <html>
-<head><title>Lookup Results</title><style>body{font-family:system-ui;margin:40px} li{margin:20px 0}</style></head>
+<head>
+    <title>Lookup Results - BookTracker</title>
+    <meta charset="utf-8">
+    <style>
+        body {font-family:system-ui, sans-serif; margin:40px; background:#f8f9fa; line-height:1.6;}
+        h1 {color:#2c3e50;}
+        input, button {padding:10px 16px; font-size:16px; border-radius:6px;}
+        button {background:#0066cc; color:white; border:none; cursor:pointer;}
+        button:hover {background:#0052a3;}
+        img {max-height:180px; border-radius:8px; box-shadow:0 4px 15px rgba(0,0,0,0.15);}
+        .result {background:white; padding:25px; margin:20px 0; border-radius:12px; 
+                 box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; align-items:flex-start;}
+        .info {margin-left:30px; flex:1;}
+        .title {font-size:1.6em; font-weight:bold; color:#2c3e50; margin-bottom:8px;}
+        .author {font-size:1.3em; color:#555; margin-bottom:12px;}
+        .meta {color:#666; margin:8px 0;}
+        .description {margin-top:12px; color:#444; font-size:0.95em;}
+        .actions {margin-top:20px;}
+        .actions button {margin-right:12px;}
+        .no-results {font-style:italic; color:#777;}
+        hr {margin:40px 0; border:none; border-top:1px solid #eee;}
+        a {text-decoration:none;}
+    </style>
+</head>
 <body>
-<h1>Lookup Results</h1>
-<a href="/add">Back to Add</a><hr>
+
+<h1>Google Books Results</h1>
+
+<a href="/add"><button>← Back to Add Book</button></a>
+<hr>
+
 {% if results %}
-<ul>
-{% for book in results %}
-<li>
-    <strong>{{ book.title }}</strong> by {{ book.author }}<br>
-    ISBN-13: {{ book.isbn13 or 'N/A' }}<br>
-    ISBN-10: {{ book.isbn10 or 'N/A' }}<br>
-    <img src="{{ book.cover_url or 'https://via.placeholder.com/100x150.png?text=No+Cover' }}" alt="Cover" style="max-height:140px"><br>
-    <form method="post" action="/add_selected">
-        <input type="hidden" name="title" value="{{ book.title }}">
-        <input type="hidden" name="author" value="{{ book.author }}">
-        <input type="hidden" name="isbn13" value="{{ book.isbn13 or '' }}">
-        <input type="hidden" name="isbn10" value="{{ book.isbn10 or '' }}">
-        <input type="hidden" name="description" value="{{ book.description or '' }}">
-        <input type="hidden" name="cover_url" value="{{ book.cover_url or '' }}">
-        <input type="hidden" name="lccn" value="{{ query.lccn or '' }}">
-        <button type="submit">Add this book</button>
-    </form>
-</li>
-{% endfor %}
-</ul>
+    <p><strong>Found {{ results|length }} result{{ '' if results|length == 1 else 's' }}</strong></p>
+
+    {% for book in results %}
+        <div class="result">
+            <img src="{{ book.cover_url or '/static/no-cover.jpg' }}" alt="Cover">
+            <div class="info">
+                <div class="title">{{ book.title }}</div>
+                <div class="author">by {{ book.author }}</div>
+
+                <div class="meta">
+                    {% if book.isbn13 %}ISBN-13: {{ book.isbn13 }}{% endif %}
+                    {% if book.isbn10 %} • ISBN-10: {{ book.isbn10 }}{% endif %}
+                </div>
+
+                {% if book.description %}
+                    <div class="description">
+                        {{ book.description[:400] }}{% if book.description|length > 400 %}...{% endif %}
+                    </div>
+                {% endif %}
+
+                <div class="actions">
+                    <form method="post" action="/add_selected" style="display:inline;">
+                        <input type="hidden" name="title" value="{{ book.title }}">
+                        <input type="hidden" name="author" value="{{ book.author }}">
+                        <input type="hidden" name="isbn13" value="{{ book.isbn13 or '' }}">
+                        <input type="hidden" name="isbn10" value="{{ book.isbn10 or '' }}">
+                        <input type="hidden" name="description" value="{{ book.description or '' }}">
+                        <input type="hidden" name="cover_url" value="{{ book.cover_url or '' }}">
+                        <input type="hidden" name="lccn" value="{{ query.lccn or '' }}">
+                        <button type="submit">Add This Book</button>
+                    </form>
+                    <a href="/add"><button type="button">Skip / Add Manually</button></a>
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
 {% else %}
-<p>No results found. Try different search terms or <a href="/add">add manually</a>.</p>
+    <p class="no-results">No books found for your search.</p>
+    <p><a href="/add"><button>Add Manually Instead</button></a></p>
 {% endif %}
+
 </body>
 </html>
