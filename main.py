@@ -1,10 +1,12 @@
-# main.py — FINAL, WORKING with date handling fixed
+# main.py — FINAL, COMPLETE, WORKING BookTracker with static covers
 from fastapi import FastAPI, Form, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles   # ← This serves your static/ folder
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, update, delete, text
 from datetime import date
+from decimal import Decimal
 
 # Absolute imports
 from database import init_db, get_db
@@ -14,8 +16,11 @@ from services.google_books import lookup, general_lookup
 from schemas import BookCreate
 
 app = FastAPI(title="BookTracker")
-templates = Jinja2Templates(directory="templates")
 
+# SERVE STATIC FILES — this is what makes /static/no-cover.jpg work
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+templates = Jinja2Templates(directory="templates")
 app.add_event_handler("startup", init_db)
 
 @app.get("/", response_class=HTMLResponse)
@@ -25,7 +30,6 @@ async def home(request: Request, q: str = "", db: AsyncSession = Depends(get_db)
 
 @app.get("/add", response_class=HTMLResponse)
 async def add_form(request: Request):
-    # Always provide a default empty query dict so template never fails
     return templates.TemplateResponse("add.html", {
         "request": request,
         "query": {"title": "", "author": "", "isbn": "", "lccn": ""}
@@ -41,17 +45,19 @@ async def lookup_books(
     db: AsyncSession = Depends(get_db)
 ):
     results = await general_lookup(title=title.strip(), author=author.strip(), isbn=isbn.strip(), lccn=lccn.strip())
+    query_data = {"title": title, "author": author, "isbn": isbn, "lccn": lccn}
+
     if not results:
-        # No results → go back to add page with data preserved
         return templates.TemplateResponse("add.html", {
             "request": request,
-            "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn},
-            "error": "No books found — add manually below"
+            "query": query_data,
+            "error": "No results — add manually below"
         })
+
     return templates.TemplateResponse("lookup.html", {
         "request": request,
         "results": results,
-        "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn}
+        "query": query_data
     })
 
 @app.post("/add_selected")
@@ -74,17 +80,56 @@ async def add_selected(
         description=description or None,
         cover_url=cover_url or None
     )
-
     result_book = await add_copy_or_create(db, book_data)
 
     if result_book.copies > 1:
         return HTMLResponse(f"""
         <h2>Added Another Copy!</h2>
-        <p>You now have <strong>{result_book.copies} copies</strong> of:</p>
-        <p><em>{title}</em> by {author}</p>
-        <a href="/">Back to Library</a>
+        <p>You now have <strong>{result_book.copies} copies</strong> of <em>{title}</em> by {author}</p>
+        <a href="/">← Back to Library</a>
         """)
 
+    return RedirectResponse("/", status_code=303)
+
+@app.post("/add_manual")
+async def add_manual(
+    title: str = Form(...),
+    author: str = Form(...),
+    isbn13: str = Form(""),
+    isbn10: str = Form(""),
+    lccn: str = Form(""),
+    copies: int = Form(1),
+    cover_url: str = Form(""),
+    purchase_price: str = Form(""),
+    date_purchased: str = Form(""),
+    date_read: str = Form(""),
+    comment: str = Form(""),
+    db: AsyncSession = Depends(get_db)
+):
+    price = Decimal(purchase_price) if purchase_price else None
+    try:
+        purchased = date.fromisoformat(date_purchased) if date_purchased else None
+    except:
+        purchased = None
+    try:
+        read = date.fromisoformat(date_read) if date_read else None
+    except:
+        read = None
+
+    book_data = BookCreate(
+        title=title,
+        author=author,
+        isbn13=isbn13 or None,
+        isbn10=isbn10 or None,
+        lccn=lccn or None,
+        copies=max(1, copies),
+        purchase_price=price,
+        date_purchased=purchased,
+        date_read=read,
+        comment=comment or None,
+        cover_url=cover_url.strip() or None
+    )
+    await add_copy_or_create(db, book_data)
     return RedirectResponse("/", status_code=303)
 
 @app.get("/edit/{book_id}", response_class=HTMLResponse)
@@ -93,6 +138,7 @@ async def edit_form(book_id: int, request: Request, db: AsyncSession = Depends(g
     if not book:
         raise HTTPException(404, "Book not found")
     return templates.TemplateResponse("edit.html", {"request": request, "book": book})
+
 
 @app.post("/edit/{book_id}")
 async def update_book_route(
@@ -103,26 +149,25 @@ async def update_book_route(
     isbn10: str = Form(""),
     lccn: str = Form(""),
     copies: int = Form(1),
+    cover_url: str = Form(""),           # ← NEW: accept cover URL
     purchase_price: str = Form(""),
-    date_purchased: str = Form(""),      # comes as string "YYYY-MM-DD"
-    date_read: str = Form(""),           # comes as string "YYYY-MM-DD"
+    date_purchased: str = Form(""),
+    date_read: str = Form(""),
     comment: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
     from decimal import Decimal
+    from datetime import date
 
-    # Convert empty strings to None
     price = Decimal(purchase_price) if purchase_price else None
 
-    # Convert date strings → real date objects (or None)
     try:
         purchased = date.fromisoformat(date_purchased) if date_purchased else None
-    except ValueError:
+    except:
         purchased = None
-
     try:
         read = date.fromisoformat(date_read) if date_read else None
-    except ValueError:
+    except:
         read = None
 
     book_data = {
@@ -132,6 +177,7 @@ async def update_book_route(
         "isbn10": isbn10 or None,
         "lccn": lccn or None,
         "copies": max(1, copies),
+        "cover_url": cover_url.strip() or None,   # ← NEW: save cover URL
         "purchase_price": price,
         "date_purchased": purchased,
         "date_read": read,
@@ -145,47 +191,5 @@ async def update_book_route(
 @app.get("/delete/{book_id}")
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):
     await delete_book(db, book_id)
-    return RedirectResponse("/", status_code=303)
-
-@app.post("/add_manual")
-async def add_manual(
-    title: str = Form(...),
-    author: str = Form(...),
-    isbn13: str = Form(""),
-    isbn10: str = Form(""),
-    lccn: str = Form(""),
-    copies: int = Form(1),
-    purchase_price: str = Form(""),
-    date_purchased: str = Form(""),
-    date_read: str = Form(""),
-    comment: str = Form(""),
-    db: AsyncSession = Depends(get_db)
-):
-    from decimal import Decimal
-    from datetime import date
-
-    price = Decimal(purchase_price) if purchase_price else None
-    try:
-        purchased = date.fromisoformat(date_purchased) if date_purchased else None
-    except ValueError:
-        purchased = None
-    try:
-        read = date.fromisoformat(date_read) if date_read else None
-    except ValueError:
-        read = None
-
-    book_data = BookCreate(
-        title=title,
-        author=author,
-        isbn13=isbn13 or None,
-        isbn10=isbn10 or None,
-        lccn=lccn or None,
-        copies=max(1, copies),
-        purchase_price=price,
-        date_purchased=purchased,
-        date_read=read,
-        comment=comment or None
-    )
-    await add_copy_or_create(db, book_data)
     return RedirectResponse("/", status_code=303)
 

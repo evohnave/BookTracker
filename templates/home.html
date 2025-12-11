@@ -1,66 +1,87 @@
+```html
 <!DOCTYPE html>
 <html>
 <head>
     <title>BookTracker</title>
+    <meta charset="utf-8">
     <style>
-        body {font-family:system-ui;margin:40px;background:#f9f9f9;line-height:1.6;}
-        input,button {padding:10px 16px;font-size:16px;border-radius:6px;}
-        img {max-height:140px;border-radius:8px;box-shadow:0 2px 8px #0002;}
-        li {background:white;padding:20px;margin:15px 0;border-radius:12px;display:flex;align-items:flex-start;}
-        .info {margin-left:20px;flex:1;}
-        .meta {font-size:0.9em;color:#555;margin:8px 0;}
-        .price {font-weight:bold;color:#d32;}
-        a button {background:#0066cc;color:white;border:none;padding:8px 16px;border-radius:6px;}
-        .actions button {margin-left:8px;padding:6px 12px;font-size:14px;}
+        body {font-family:system-ui, sans-serif; margin:40px; background:#f8f9fa; line-height:1.6;}
+        h1 {color:#2c3e50;}
+        input, button {padding:10px 16px; font-size:16px; border-radius:6px; border:1px solid #ccc;}
+        button {background:#0066cc; color:white; border:none; cursor:pointer;}
+        button:hover {background:#0052a3;}
+        img {max-height:150px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15);}
+        ul {list-style:none; padding:0;}
+        li {background:white; padding:20px; margin:15px 0; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; align-items:flex-start;}
+        .book-info {margin-left:25px; flex:1;}
+        .title {font-size:1.5em; font-weight:bold; color:#2c3e50;}
+        .author {font-size:1.2em; color:#555;}
+        .meta {margin:10px 0; font-size:0.95em; color:#666;}
+        .price {font-weight:bold; color:#27ae60;}
+        .comment {font-style:italic; color:#7f8c8d; margin-top:8px;}
+        .actions {margin-top:12px;}
+        .actions button {margin-right:8px; padding:8px 16px;}
+        .delete-btn {background:#e74c3c !important;}
+        a {text-decoration:none;}
+        hr {margin:30px 0; border:none; border-top:1px solid #eee;}
     </style>
 </head>
 <body>
-    <h1>My Books ({{ books|length }})</h1>
-    <form>
-        <input name="q" value="{{ q }}" placeholder="Search title/author/ISBN/LCCN" size="60">
-        <button type="submit">Search</button>
-    </form>
-    <a href="/add"><button>Add Book</button></a>
-    <hr>
 
-    {% if not books %}
-        <p>No books yet — <a href="/add">add one</a>!</p>
-    {% else %}
-        <ul style="list-style:none;padding:0">
-        {% for b in books %}
-            <li>
-                <img src="{{ b.cover_url or 'https://via.placeholder.com/100x150.png?text=No+Cover' }}">
-                <div class="info">
-                    <strong style="font-size:1.4em">
-                        {{ b.title }}{% if b.copies > 1 %} ({{ b.copies }} copies){% endif %}
-                    </strong><br>
-                    by {{ b.author }}<br>
+<h1>My Books ({{ books|length }})</h1>
 
-                    <div class="meta">
-                        {% if b.purchase_price %}
-                            <span class="price">Paid: ${{ "%.2f"|format(b.purchase_price) }}</span>
-                            {% if b.date_purchased %} on {{ b.date_purchased }}{% endif %}
-                        {% endif %}
-                        {% if b.date_read %} • Read: {{ b.date_read }}{% endif %}
-                        {% if b.comment %} • <em>{{ b.comment }}</em>{% endif %}
-                    </div>
+<form style="margin-bottom:20px;">
+    <input name="q" value="{{ q }}" placeholder="Search title, author, ISBN, or LCCN..." size="60">
+    <button type="submit">Search</button>
+</form>
 
-                    <small>
-                        {% if b.isbn13 %}ISBN-13: {{ b.isbn13 }} {% endif %}
-                        {% if b.isbn10 %}ISBN-10: {{ b.isbn10 }} {% endif %}
-                        {% if b.lccn %}LCCN: {{ b.lccn }}{% endif %}
-                    </small><br>
+<a href="/add"><button>Add New Book</button></a>
+<hr>
 
-                    <div class="actions" style="margin-top:10px">
-                        <a href="/edit/{{ b.id }}"><button>Edit</button></a>
-                        <a href="/delete/{{ b.id }}" onclick="return confirm('Delete {{ b.title }}?')">
-                            <button style="background:#c33;color:white">Delete</button>
-                        </a>
-                    </div>
+{% if not books %}
+    <p><em>No books yet — <a href="/add">add your first one</a>!</em></p>
+{% else %}
+    <ul>
+    {% for b in books %}
+        <li>
+            <img src="{{ b.cover_url or '/static/no-cover.jpg' }}" alt="Cover">
+            <div class="book-info">
+                <div class="title">
+                    {{ b.title }}
+                    {% if b.copies > 1 %} <small style="color:#888;">({{ b.copies }} copies)</small>{% endif %}
                 </div>
-            </li>
-        {% endfor %}
-        </ul>
-    {% endif %}
+                <div class="author">by {{ b.author }}</div>
+
+                <div class="meta">
+                    {% if b.purchase_price %}
+                        <span class="price">Paid ${{ "%.2f"|format(b.purchase_price) }}</span>
+                        {% if b.date_purchased %} on {{ b.date_purchased }}{% endif %}
+                    {% endif %}
+                    {% if b.date_read %} • Read {{ b.date_read }}{% endif %}
+                </div>
+
+                {% if b.comment %}
+                    <div class="comment">“{{ b.comment }}”</div>
+                {% endif %}
+
+                <div class="meta>
+                    {% if b.isbn13 %}ISBN-13: {{ b.isbn13 }} {% endif %}
+                    {% if b.isbn10 %}ISBN-10: {{ b.isbn10 }} {% endif %}
+                    {% if b.lccn %}LCCN: {{ b.lccn }}{% endif %}
+                </div>
+
+                <div class="actions">
+                    <a href="/edit/{{ b.id }}"><button>Edit</button></a>
+                    <a href="/delete/{{ b.id }}" 
+                       onclick="return confirm('Really delete {{ b.title }}?')">
+                        <button class="delete-btn">Delete</button>
+                    </a>
+                </div>
+            </div>
+        </li>
+    {% endfor %}
+    </ul>
+{% endif %}
+
 </body>
 </html>
