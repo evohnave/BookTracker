@@ -4,11 +4,12 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
-
+from sqlalchemy import select, or_, update, delete, text
 from database import init_db, get_db
 from crud.book import get_books, add_copy_or_create, get_book, update_book, delete_book
 from services.google_books import master_lookup as lookup  # ← This is the magic one
 from schemas import BookCreate
+from models import Book
 
 app = FastAPI(title="BookTracker")
 app.mount("/static", StaticFiles(directory="static"), name="static")
