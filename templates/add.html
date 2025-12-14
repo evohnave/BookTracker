@@ -43,5 +43,20 @@
     <button type="submit">Save Book (Manual)</button>
     <a href="/">Cancel</a>
 </form>
+<script>
+    document.querySelector("form[action='/lookup']").addEventListener("submit", function(e) {
+        const isbn = this.querySelector("input[name='isbn']").value;
+        if (isbn.trim() === '') return;  // Skip if empty
+
+        const clean = isbn.replace(/[^0-9X]/gi, '');  // Clean in JS too
+        const isValid10 = /^[0-9]{9}[0-9X]$/.test(clean);
+        const isValid13 = /^[0-9]{13}$/.test(clean);
+
+        if (!isValid10 && !isValid13) {
+            e.preventDefault();
+            alert("Invalid ISBN — it should be 10 digits (with optional X at end) or 13 digits. Please check and try again.");
+        }
+    });
+</script>
 </body>
 </html>
