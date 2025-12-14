@@ -10,6 +10,7 @@ from crud.book import get_books, add_copy_or_create, get_book, update_book, dele
 from services.google_books import master_lookup as lookup  # ← This is the magic one
 from schemas import BookCreate
 from models import Book
+from services.isbn_utils import clean_isbn, validate_isbn
 
 app = FastAPI(title="BookTracker")
 app.mount("/static", StaticFiles(directory="static"), name="static")
@@ -38,13 +39,21 @@ async def lookup_books(
     request: Request = None,
     db: AsyncSession = Depends(get_db)
 ):
-    result, source = await lookup(isbn=isbn.strip())
+    isbn_clean = clean_isbn(isbn)
+    if isbn and not validate_isbn(isbn):
+        return templates.TemplateResponse("add.html", {
+            "request": request,
+            "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn},
+            "error": "Invalid ISBN — please check and try again"
+        })
+
+    result, source = await lookup(isbn=isbn_clean.strip())
 
     if not result:
         return templates.TemplateResponse("add.html", {
             "request": request,
             "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn},
-            "error": f"ISBN {isbn or 'unknown'} not found in any source — add manually below"
+            "error": "No book found — add manually below"
         })
 
     return templates.TemplateResponse("lookup.html", {
