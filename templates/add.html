@@ -12,6 +12,12 @@
 <body>
 <h1>Add a Book</h1>
 
+{% if error %}
+    <div style="color:red; font-weight:bold; margin:20px 0; padding:10px; background:#ffe6e6; border:1px solid red; border-radius:6px;">
+        {{ error }}
+    </div>
+{% endif %}
+
 <form method="post" action="/lookup">
     <h3>Search (optional)</h3>
     <p><label>Title:</label>      <input name="title" size="70" value="{{ query.title or '' }}"></p>
