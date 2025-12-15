@@ -43,7 +43,7 @@ async def add_book(
     # Validate ISBN if provided
     if isbn.strip():
         try:
-            cleaned_isbn = clean_and_validate(isbn)  # your function — raises ValueError if invalid
+            cleaned_isbn = is_valid(isbn)  # your function — raises ValueError if invalid
         except ValueError as e:
             return templates.TemplateResponse("add.html", {
                 "request": request,
@@ -138,15 +138,30 @@ async def add_selected(
     cover_url: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
-    # Use your ISBN utils to clean and derive missing version
-    isbn13_clean = clean_and_validate(isbn13) if isbn13 else ""
-    isbn10_clean = clean_and_validate(isbn10) if isbn10 else ""
+    # Clean and validate any provided ISBNs
+    isbn13_clean = ""
+    isbn10_clean = ""
 
-    # Derive the other if one is missing
+    if isbn13.strip():
+        cleaned = isbn13.replace("-", "").replace(" ", "")
+        if is_valid(cleaned):
+            isbn13_clean = cleaned
+
+    if isbn10.strip():
+        cleaned = isbn10.replace("-", "").replace(" ", "")
+        if is_valid(cleaned):
+            isbn10_clean = cleaned
+
+    # Derive the other format if only one is present and valid
     if isbn13_clean and not isbn10_clean:
-        isbn10_clean = to_isbn10(isbn13_clean) or ""
-    elif isbn10_clean and not isbn13_clean:
-        isbn13_clean = to_isbn13(isbn10_clean)
+        derived = to_isbn10(isbn13_clean)
+        if derived:
+            isbn10_clean = derived
+
+    if isbn10_clean and not isbn13_clean:
+        derived = to_isbn13(isbn10_clean)
+        if derived:
+            isbn13_clean = derived
 
     book_data = BookCreate(
         title=title,
@@ -164,7 +179,7 @@ async def add_selected(
         return HTMLResponse(f"""
         <h2>Added Another Copy!</h2>
         <p>You now have <strong>{result_book.copies} copies</strong> of <em>{title}</em> by {author}</p>
-        <a href="/">← Back to Library</a>
+        <a href="/">Back to Library</a>
         """)
 
     return RedirectResponse("/", status_code=303)
