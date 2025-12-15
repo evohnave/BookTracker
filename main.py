@@ -7,7 +7,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, or_, update, delete, text
 from database import init_db, get_db
 from crud.book import get_books, add_copy_or_create, get_book, update_book, delete_book
-from services.google_books import master_lookup as lookup  # ← This is the magic one
+from services.google_books import (
+    openlibrary_lookup, google_lookup, isbndb_lookup,
+    merge_results
+    )
 from schemas import BookCreate
 from models import Book
 from services.isbn_utils import is_valid, to_isbn10, to_isbn13
@@ -96,34 +99,24 @@ async def lookup_books(
     request: Request = None,
     db: AsyncSession = Depends(get_db)
 ):
-    # Validate ISBN using your code if provided
-    isbn_clean = ""
-    if isbn.strip():
-        try:
-            if not is_valid(isbn):
-                raise ValueError("Invalid ISBN — please check the number and try again")
-            isbn_clean = isbn.replace("-", "").replace(" ", "")  # clean after validation
-        except ValueError as e:
-            return templates.TemplateResponse("add.html", {
-                "request": request,
-                "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn},
-                "error": str(e)
-            })
+    from asyncio import gather
 
-    # Perform lookup
-    result, source = await lookup(isbn=isbn_clean)
+    # Run all three lookups in parallel
+    openlib, google, isbndb = await gather(
+        openlibrary_lookup(isbn=isbn.strip()),
+        google_lookup(isbn=isbn.strip()),
+        isbndb_lookup(isbn=isbn.strip())
+    )
 
-    if not result:
-        return templates.TemplateResponse("add.html", {
-            "request": request,
-            "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn},
-            "error": "No book found — add manually below"
-        })
+    # Merge for the synthesis pane
+    synthesis = merge_results(openlib, google, isbndb)
 
     return templates.TemplateResponse("lookup.html", {
         "request": request,
-        "results": [result],
-        "source": source,
+        "openlib": openlib or {},
+        "google": google or {},
+        "isbndb": isbndb or {},
+        "synthesis": synthesis,
         "query": {"title": title, "author": author, "isbn": isbn, "lccn": lccn}
     })
 
