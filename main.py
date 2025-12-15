@@ -18,6 +18,11 @@ templates = Jinja2Templates(directory="templates")
 
 app.add_event_handler("startup", init_db)
 
+@app.get("/", response_class=HTMLResponse)
+async def home(request: Request, q: str = "", db: AsyncSession = Depends(get_db)):
+    books = await get_books(db, q)
+    return templates.TemplateResponse("home.html", {"request": request, "books": books, "q": q})
+
 @app.get("/add", response_class=HTMLResponse)
 async def add_form(request: Request):
     return templates.TemplateResponse("add.html", {
