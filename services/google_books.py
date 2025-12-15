@@ -2,9 +2,9 @@
 import httpx
 from typing import Tuple, Optional, Dict
 
-async def google_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
+async def google_lookup(isbn: str = "") -> Optional[Dict]:
     if not isbn:
-        return None, ""
+        return None
     async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
         try:
             r = await client.get(f"https://www.googleapis.com/books/v1/volumes?q=isbn:{isbn}")
@@ -17,19 +17,19 @@ async def google_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
                     "cover_url": i.get("imageLinks", {}).get("thumbnail", "").replace("http://", "https://"),
                     "isbn13": next((x["identifier"] for x in i.get("industryIdentifiers", []) if x["type"] == "ISBN_13"), ""),
                     "isbn10": next((x["identifier"] for x in i.get("industryIdentifiers", []) if x["type"] == "ISBN_10"), ""),
-                }, "Google Books"
+                }
         except:
             pass
-    return None, ""
+    return None
 
-async def openlibrary_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
+async def openlibrary_lookup(isbn: str = "") -> Optional[Dict]:
     if not isbn:
-        return None, ""
+        return None
     async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
         try:
             r = await client.get(f"https://openlibrary.org/isbn/{isbn}.json")
             if r.status_code != 200:
-                return None, ""
+                return None
             data = r.json()
             cover_id = data.get("covers", [None])[0]
 
@@ -54,13 +54,13 @@ async def openlibrary_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
                 "cover_url": f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else None,
                 "isbn13": isbn if len(isbn) == 13 else None,
                 "isbn10": isbn if len(isbn) == 10 else None,
-            }, "Open Library"
+            }
         except:
-            return None, ""
+            return None
 
-async def isbndb_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
+async def isbndb_lookup(isbn: str = "") -> Optional[Dict]:
     if not isbn:
-        return None, ""
+        return None
     async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
         try:
             r = await client.get(f"https://api.isbndb.com/book/{isbn}")
@@ -73,10 +73,10 @@ async def isbndb_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
                     "cover_url": data.get("image", ""),
                     "isbn13": data.get("isbn13"),
                     "isbn10": data.get("isbn10"),
-                }, "ISBNdb"
+                }
         except:
             pass
-    return None, ""
+    return None
 
 # MASTER LOOKUP — Open Library first (best for niche books)
 async def master_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
@@ -93,4 +93,14 @@ async def master_lookup(isbn: str = "") -> Tuple[Optional[Dict], str]:
         return result, source
 
     return None, "No book found"
+
+def merge_results(openlib: Optional[Dict], google: Optional[Dict], isbndb: Optional[Dict]) -> Dict:
+    sources = [r for r in [openlib, google, isbndb] if r]
+    merged = {}
+    for key in ["title", "author", "description", "cover_url", "isbn13", "isbn10"]:
+        for r in sources:
+            if r.get(key):
+                merged[key] = r[key]
+                break
+    return merged
 
