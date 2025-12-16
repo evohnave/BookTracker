@@ -25,7 +25,7 @@ async def google_lookup(isbn: str = "") -> Optional[Dict]:
 async def openlibrary_lookup(isbn: str = "") -> Optional[Dict]:
     if not isbn:
         return None
-    async with httpx.AsyncClient(timeout=6.0, follow_redirects=True) as client:
+    async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
         try:
             r = await client.get(f"https://openlibrary.org/isbn/{isbn}.json")
             if r.status_code != 200:
@@ -33,12 +33,21 @@ async def openlibrary_lookup(isbn: str = "") -> Optional[Dict]:
             data = r.json()
             cover_id = data.get("covers", [None])[0]
 
-            # Robust author handling
             author = "Unknown"
             if data.get("by_statement"):
                 author = data["by_statement"]
-            elif data.get("contributors"):
-                author = ", ".join([c.get("name", "Unknown") for c in data["contributors"]])
+            elif data.get("authors"):
+                # Fetch first author's name if only key is provided
+                first_author = data["authors"][0]
+                if isinstance(first_author, dict) and "key" in first_author:
+                    ar = await client.get(f"https://openlibrary.org{first_author['key']}.json")
+                    if ar.status_code == 200:
+                        author_data = ar.json()
+                        author = author_data.get("name", "Unknown")
+                    else:
+                        author = "Unknown"
+                elif isinstance(first_author, dict) and "name" in first_author:
+                    author = first_author["name"]
 
             description = ""
             if data.get("description"):
@@ -55,7 +64,8 @@ async def openlibrary_lookup(isbn: str = "") -> Optional[Dict]:
                 "isbn13": isbn if len(isbn) == 13 else None,
                 "isbn10": isbn if len(isbn) == 10 else None,
             }
-        except:
+        except Exception as e:
+            print(f"Open Library error: {e}")
             return None
 
 async def isbndb_lookup(isbn: str = "") -> Optional[Dict]:
