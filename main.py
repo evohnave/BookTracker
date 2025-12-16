@@ -198,6 +198,14 @@ async def update_book_route(
     date_purchased: str = Form(""),
     date_read: str = Form(""),
     comment: str = Form(""),
+    # === NEW FIELDS BELOW ===
+    publisher: str = Form(""),
+    publication_date: str = Form(""),
+    pages: str = Form(""),
+    book_format: str = Form(""),
+    dimensions: str = Form(""),
+    daw_book_number: str = Form(""),
+    daw_catalog_number: str = Form(""),
     db: AsyncSession = Depends(get_db)
 ):
     from decimal import Decimal
@@ -206,6 +214,11 @@ async def update_book_route(
     price = Decimal(purchase_price) if purchase_price else None
     purchased = date.fromisoformat(date_purchased) if date_purchased else None
     read = date.fromisoformat(date_read) if date_read else None
+
+    # Convert new fields with proper typing / None handling
+    pub_date = date.fromisoformat(publication_date) if publication_date else None
+    pages_int = int(pages) if pages else None
+    daw_num = int(daw_book_number) if daw_book_number else None
 
     book_data = {
         "title": title,
@@ -218,7 +231,15 @@ async def update_book_route(
         "purchase_price": price,
         "date_purchased": purchased,
         "date_read": read,
-        "comment": comment or None
+        "comment": comment or None,
+        # === NEW FIELDS ===
+        "publisher": publisher or None,
+        "publication_date": pub_date,
+        "pages": pages_int,
+        "book_format": book_format or None,
+        "dimensions": dimensions or None,
+        "daw_book_number": daw_num,
+        "daw_catalog_number": daw_catalog_number or None,
     }
     await db.execute(update(Book).where(Book.id == book_id).values(**book_data))
     await db.commit()

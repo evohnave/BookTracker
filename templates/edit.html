@@ -31,6 +31,45 @@
     <p><label>Comment:</label><br>
        <textarea name="comment" rows="4">{{ book.comment or '' }}</textarea></p>
 
+<h3>Edition Details</h3>
+
+<div class="form-group">
+    <label for="publisher">Publisher</label>
+    <input type="text" name="publisher" id="publisher" value="{{ book.publisher or '' }}">
+</div>
+
+<div class="form-group">
+    <label for="publication_date">Publication Date</label>
+    <input type="date" name="publication_date" id="publication_date" value="{{ book.publication_date.strftime('%Y-%m-%d') if book.publication_date else '' }}">
+</div>
+
+<div class="form-group">
+    <label for="pages">Number of Pages</label>
+    <input type="number" name="pages" id="pages" value="{{ book.pages if book.pages is not none else '' }}">
+</div>
+
+<div class="form-group">
+    <label for="book_format">Format</label>
+    <input type="text" name="book_format" id="book_format" value="{{ book.book_format or '' }}" placeholder="e.g., Paperback, EPUB">
+</div>
+
+<div class="form-group">
+    <label for="dimensions">Physical Dimensions</label>
+    <input type="text" name="dimensions" id="dimensions" value="{{ book.dimensions or '' }}" placeholder='e.g., 4.25" x 7" x 1"'>
+</div>
+
+<h3>DAW-Specific</h3>
+
+<div class="form-group">
+    <label for="daw_book_number">DAW Book/Collector Number</label>
+    <input type="number" name="daw_book_number" id="daw_book_number" value="{{ book.daw_book_number if book.daw_book_number is not none else '' }}">
+</div>
+
+<div class="form-group">
+    <label for="daw_catalog_number">DAW Catalog Number (6 chars)</label>
+    <input type="text" name="daw_catalog_number" id="daw_catalog_number" maxlength="6" value="{{ book.daw_catalog_number or '' }}">
+</div>
+
     <button type="submit">Save Changes</button>
     <a href="/">Cancel</a>
 </form>
