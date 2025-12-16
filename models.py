@@ -13,10 +13,15 @@ class Book(Base):
     description = Column(String)
     cover_url = Column(String)
     copies = Column(Integer, default=1, nullable=False)
-
-    # NEW FIELDS — safe, nullable
     purchase_price = Column(Numeric(10, 2), nullable=True)
     date_purchased = Column(Date, nullable=True)
     date_read = Column(Date, nullable=True)
     comment = Column(String, nullable=True)
+    daw_book_number = db.Column(db.Integer, nullable=True)
+    daw_catalog_number = db.Column(db.String(6), nullable=True)
+    publication_date = db.Column(db.Date, nullable=True)
+    publisher = db.Column(db.String(255), nullable=True)
+    pages = db.Column(db.Integer, nullable=True)
+    dimensions = db.Column(db.String(50), nullable=True)
+    book_format = db.Column(db.String(100), nullable=True)
 
