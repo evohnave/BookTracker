@@ -1,87 +1,107 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>BookTracker</title>
-    <meta charset="utf-8">
-    <style>
-        body {font-family:system-ui, sans-serif; margin:40px; background:#f8f9fa; line-height:1.6;}
-        h1 {color:#2c3e50;}
-        input, button {padding:10px 16px; font-size:16px; border-radius:6px; border:1px solid #ccc;}
-        button {background:#0066cc; color:white; border:none; cursor:pointer;}
-        button:hover {background:#0052a3;}
-        img {max-height:150px; border-radius:8px; box-shadow:0 4px 12px rgba(0,0,0,0.15);}
-        ul {list-style:none; padding:0;}
-        li {background:white; padding:20px; margin:15px 0; border-radius:12px; box-shadow:0 2px 10px rgba(0,0,0,0.1); display:flex; align-items:flex-start;}
-        .book-info {margin-left:25px; flex:1;}
-        .title {font-size:1.5em; font-weight:bold; color:#2c3e50;}
-        .author {font-size:1.2em; color:#555;}
-        .meta {margin:10px 0; font-size:0.95em; color:#666;}
-        .price {font-weight:bold; color:#27ae60;}
-        .comment {font-style:italic; color:#7f8c8d; margin-top:8px;}
-        .actions {margin-top:12px;}
-        .actions button {margin-right:8px; padding:8px 16px;}
-        .delete-btn {background:#e74c3c !important;}
-        a {text-decoration:none;}
-        hr {margin:30px 0; border:none; border-top:1px solid #eee;}
-    </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>My Book Collection</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
 </head>
-<body>
+<body class="bg-light">
+    <div class="container py-5">
+        <h1 class="mb-4 text-center">My Book Collection</h1>
 
-<h1>My Books ({{ books|length }})</h1>
-
-<form style="margin-bottom:20px;">
-    <input name="q" value="{{ q }}" placeholder="Search title, author, ISBN, or LCCN..." size="60">
-    <button type="submit">Search</button>
-</form>
-
-<a href="/add"><button>Add Book</button></a>
-<a href="/"><button>Back to Library</button></a>
-<hr>
-
-{% if not books %}
-    <p><em>No books yet — <a href="/add">add your first one</a>!</em></p>
-{% else %}
-    <ul>
-    {% for b in books %}
-        <li>
-            <img src="{{ b.cover_url or '/static/no-cover.jpg' }}" alt="Cover">
-            <div class="book-info">
-                <div class="title">
-                    {{ b.title }}
-                    {% if b.copies > 1 %} <small style="color:#888;">({{ b.copies }} copies)</small>{% endif %}
-                </div>
-                <div class="author">by {{ b.author }}</div>
-
-                <div class="meta">
-                    {% if b.purchase_price %}
-                        <span class="price">Paid ${{ "%.2f"|format(b.purchase_price) }}</span>
-                        {% if b.date_purchased %} on {{ b.date_purchased }}{% endif %}
-                    {% endif %}
-                    {% if b.date_read %} • Read {{ b.date_read }}{% endif %}
+        <!-- Filter and Sort Bar -->
+        <div class="filters mb-4 p-3 border rounded bg-white shadow-sm">
+            <form method="get" class="row g-3 align-items-end">
+                <div class="col-auto">
+                    <label class="form-label fw-bold">Sort by</label>
+                    <select name="sort" class="form-select" onchange="this.form.submit()">
+                        <option value="title_asc" {% if current_sort == 'title_asc' %}selected{% endif %}>Title (A-Z)</option>
+                        <option value="title_desc" {% if current_sort == 'title_desc' %}selected{% endif %}>Title (Z-A)</option>
+                        <option value="author_asc" {% if current_sort == 'author_asc' %}selected{% endif %}>Author (A-Z)</option>
+                        <option value="author_desc" {% if current_sort == 'author_desc' %}selected{% endif %}>Author (Z-A)</option>
+                        <option value="date_read_desc" {% if current_sort == 'date_read_desc' %}selected{% endif %}>Date Read (Recent first)</option>
+                        <option value="date_read_asc" {% if current_sort == 'date_read_asc' %}selected{% endif %}>Date Read (Oldest first)</option>
+                        <option value="date_purchased_desc" {% if current_sort == 'date_purchased_desc' %}selected{% endif %}>Date Purchased (Recent first)</option>
+                        <option value="date_purchased_asc" {% if current_sort == 'date_purchased_asc' %}selected{% endif %}>Date Purchased (Oldest first)</option>
+                        <option value="publisher_asc" {% if current_sort == 'publisher_asc' %}selected{% endif %}>Publisher (A-Z)</option>
+                        <option value="publisher_desc" {% if current_sort == 'publisher_desc' %}selected{% endif %}>Publisher (Z-A)</option>
+                        <option value="format_asc" {% if current_sort == 'format_asc' %}selected{% endif %}>Format (A-Z)</option>
+                        <option value="format_desc" {% if current_sort == 'format_desc' %}selected{% endif %}>Format (Z-A)</option>
+                    </select>
                 </div>
 
-                {% if b.comment %}
-                    <div class="comment">“{{ b.comment }}”</div>
-                {% endif %}
-
-                <div class="meta>
-                    {% if b.isbn13 %}ISBN-13: {{ b.isbn13 }} {% endif %}
-                    {% if b.isbn10 %}ISBN-10: {{ b.isbn10 }} {% endif %}
-                    {% if b.lccn %}LCCN: {{ b.lccn }}{% endif %}
+                <div class="col-auto">
+                    <label class="form-label fw-bold">Format</label>
+                    <input type="text" name="format" class="form-control" value="{{ current_format or '' }}" placeholder="e.g., Paperback">
                 </div>
 
-                <div class="actions">
-                    <a href="/edit/{{ b.id }}"><button>Edit</button></a>
-                    <a href="/delete/{{ b.id }}" 
-                       onclick="return confirm('Really delete {{ b.title }}?')">
-                        <button class="delete-btn">Delete</button>
-                    </a>
+                <div class="col-auto">
+                    <label class="form-label fw-bold">Publisher</label>
+                    <input type="text" name="publisher" class="form-control" value="{{ current_publisher or '' }}" placeholder="e.g., DAW">
                 </div>
-            </div>
-        </li>
-    {% endfor %}
-    </ul>
-{% endif %}
 
+                <div class="col-auto d-flex align-items-end">
+                    <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
+                    <a href="/" class="btn btn-outline-secondary">Clear</a>
+                </div>
+            </form>
+        </div>
+
+        <!-- Books Table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-hover align-middle">
+                <thead class="table-dark">
+                    <tr>
+                        <th>Cover</th>
+                        <th>Title</th>
+                        <th>Author</th>
+                        <th>Format</th>
+                        <th>Publisher</th>
+                        <th>Pages</th>
+                        <th>ISBN-13</th>
+                        <th>Purchase Price</th>
+                        <th>Date Purchased</th>
+                        <th>Date Read</th>
+                        <th>Comment</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for book in books %}
+                    <tr>
+                        <td>
+                            {% if book.cover_url %}
+                            <img src="{{ book.cover_url }}" alt="Cover" class="img-thumbnail" style="width: 80px;">
+                            {% else %}
+                            <div class="bg-secondary border" style="width: 80px; height: 120px;"></div>
+                            {% endif %}
+                        </td>
+                        <td><strong>{{ book.title }}</strong></td>
+                        <td>{{ book.author }}</td>
+                        <td>{{ book.book_format or '' }}</td>
+                        <td>{{ book.publisher or '' }}</td>
+                        <td>{{ book.pages or '' }}</td>
+                        <td>{{ book.isbn13 or '' }}</td>
+                        <td>{{ book.purchase_price or '' }}</td>
+                        <td>{{ book.date_purchased.strftime('%Y-%m-%d') if book.date_purchased else '' }}</td>
+                        <td>{{ book.date_read.strftime('%Y-%m-%d') if book.date_read else '' }}</td>
+                        <td>{{ book.comment or '' }}</td>
+                        <td>
+                            <a href="/edit/{{ book.id }}" class="btn btn-sm btn-warning">Edit</a>
+                            <form action="/delete/{{ book.id }}" method="post" style="display:inline;">
+                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="mt-4 text-center">
+            <a href="/lookup" class="btn btn-success btn-lg">Add New Book</a>
+        </div>
+    </div>
 </body>
 </html>

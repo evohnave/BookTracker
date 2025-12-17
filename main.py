@@ -4,7 +4,7 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, update, delete, text
+from sqlalchemy import select, or_, update, delete, text, asc, desc, case
 from database import init_db, get_db
 from crud.book import get_books, add_copy_or_create, get_book, update_book, delete_book
 from services.google_books import (
@@ -21,10 +21,111 @@ templates = Jinja2Templates(directory="templates")
 
 app.add_event_handler("startup", init_db)
 
-@app.get("/", response_class=HTMLResponse)
-async def home(request: Request, q: str = "", db: AsyncSession = Depends(get_db)):
-    books = await get_books(db, q)
-    return templates.TemplateResponse("home.html", {"request": request, "books": books, "q": q})
+@app.get("/")
+async def home(
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+    sort: str = "title_asc",          # default sort
+    format: str | None = None,        # filter by format
+    publisher: str | None = None,     # filter by publisher
+    date_read_from: str | None = None,
+    date_read_to: str | None = None,
+    date_purchased_from: str | None = None,
+    date_purchased_to: str | None = None,
+):
+    # Build the query
+    query = select(Book)
+
+    # Apply filters
+    if format:
+        query = query.where(Book.book_format.ilike(f"%{format}%"))  # partial match ok for now
+    if publisher:
+        query = query.where(Book.publisher.ilike(f"%{publisher}%"))
+
+    if date_read_from:
+        query = query.where(Book.date_read >= date_read_from)
+    if date_read_to:
+        query = query.where(Book.date_read <= date_read_to)
+
+    if date_purchased_from:
+        query = query.where(Book.date_purchased >= date_purchased_from)
+    if date_purchased_to:
+        query = query.where(Book.date_purchased <= date_purchased_to)
+
+    # Apply sorting
+    sort_column = Book.title  # default
+    direction_func = asc
+
+    match sort:
+        case "title_asc":
+            sort_column = Book.title
+            direction_func = asc
+        case "title_desc":
+            sort_column = Book.title
+            direction_func = desc
+        case "author_asc":
+            sort_column = Book.author
+            direction_func = asc
+        case "author_desc":
+            sort_column = Book.author
+            direction_func = desc
+        case "date_read_asc":
+            sort_column = Book.date_read
+            direction_func = asc
+        case "date_read_desc":
+            sort_column = Book.date_read
+            direction_func = desc
+        case "date_purchased_asc":
+            sort_column = Book.date_purchased
+            direction_func = asc
+        case "date_purchased_desc":
+            sort_column = Book.date_purchased
+            direction_func = desc
+        case "publisher_asc":
+            sort_column = Book.publisher
+            direction_func = asc
+        case "publisher_desc":
+            sort_column = Book.publisher
+            direction_func = desc
+        case "format_asc":
+            sort_column = Book.book_format
+            direction_func = asc
+        case "format_desc":
+            sort_column = Book.book_format
+            direction_func = desc
+        case _:
+            sort_column = Book.title
+            direction_func = asc
+
+    # SQLite-compatible: NULLs last using CASE
+    nulls_last = case(
+        (sort_column.is_(None), 1),
+        else_=0
+    )
+
+    if direction_func == desc:
+        # For descending: sort column descending first, then nulls (which get 1 → come last)
+        sort_expr = desc(sort_column), nulls_last
+    else:
+        # For ascending: sort column ascending first, then nulls (which get 1 → come last)
+        sort_expr = sort_column, nulls_last
+
+    query = query.order_by(*sort_expr)
+
+    result = await db.execute(query)
+    books = result.scalars().all()
+
+    return templates.TemplateResponse("home.html", {
+        "request": request,
+        "books": books,
+        "current_sort": sort,
+        "current_format": format,
+        "current_publisher": publisher,
+        "date_read_from": date_read_from,
+        "date_read_to": date_read_to,
+        "date_purchased_from": date_purchased_from,
+        "date_purchased_to": date_purchased_to,
+    })
 
 @app.get("/add", response_class=HTMLResponse)
 async def add_form(request: Request):
