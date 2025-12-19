@@ -41,10 +41,11 @@
                     <input type="text" name="publisher" class="form-control" value="{{ current_publisher or '' }}" placeholder="e.g., DAW">
                 </div>
 
-                <div class="col-auto d-flex align-items-end">
+                <div class="col-auto">
                     <button type="submit" class="btn btn-primary me-2">Apply Filters</button>
                     <a href="/" class="btn btn-outline-secondary">Clear</a>
-                </div>
+                    <a href="/add" class="btn btn-success">Add New Book</a>
+              </div>
             </form>
         </div>
 
@@ -100,7 +101,7 @@
         </div>
 
         <div class="mt-4 text-center">
-            <a href="/lookup" class="btn btn-success btn-lg">Add New Book</a>
+            <a href="/add" class="btn btn-success btn-lg">Add New Book</a>
         </div>
     </div>
 </body>
