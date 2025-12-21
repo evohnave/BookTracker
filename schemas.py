@@ -9,6 +9,8 @@ class BookBase(BaseModel):
     lccn: Optional[str] = None
     description: Optional[str] = None
     cover_url: Optional[str] = None
+    openlibrary_source_url: Optional[str] = None
+    googlebooks_source_url: Optional[str] = None
 
 class BookCreate(BookBase):
     pass
@@ -18,4 +20,3 @@ class Book(BookBase):
 
     class Config:
         from_attributes = True
-

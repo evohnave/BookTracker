@@ -11,9 +11,6 @@ columns_to_add = [
 ]
 
 for col_name, col_type in columns_to_add:
-    if 'books' in inspector.get_table_names() and 'cover_url' not in [c['name'] for c in inspector.get_columns('books')]:
-        with engine.connect() as conn:
-            conn.execute(text("ALTER TABLE books ADD COLUMN {col_name} {col_type}"))
+    with engine.connect() as conn:
+        conn.execute(text(f"ALTER TABLE books ADD COLUMN {col_name} {col_type}"))
         print(f"Added column {col_name}")
-    else:
-        print("No change needed.")
