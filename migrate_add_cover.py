@@ -11,4 +11,3 @@ if 'books' in inspector.get_table_names() and 'cover_url' not in [c['name'] for 
     print("Added cover_url column!")
 else:
     print("No change needed.")
-
