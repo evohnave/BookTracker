@@ -24,5 +24,4 @@ class Book(Base):
     pages = Column(Integer, nullable=True)
     dimensions = Column(String(50), nullable=True)
     book_format = Column(String(100), nullable=True)
-    openlibrary_source_url = Column(String(255), nullable=True)
-    googlebooks_source_url = Column(String(255), nullable=True)
+

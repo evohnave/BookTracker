@@ -17,7 +17,6 @@ async def google_lookup(isbn: str = "") -> Optional[Dict]:
                     "cover_url": i.get("imageLinks", {}).get("thumbnail", "").replace("http://", "https://"),
                     "isbn13": next((x["identifier"] for x in i.get("industryIdentifiers", []) if x["type"] == "ISBN_13"), ""),
                     "isbn10": next((x["identifier"] for x in i.get("industryIdentifiers", []) if x["type"] == "ISBN_10"), ""),
-                    "googlebooks_source_url": r.json()['items'][0].get('selfLink'),
                 }
         except:
             pass
@@ -64,7 +63,6 @@ async def openlibrary_lookup(isbn: str = "") -> Optional[Dict]:
                 "cover_url": f"https://covers.openlibrary.org/b/id/{cover_id}-L.jpg" if cover_id else None,
                 "isbn13": isbn if len(isbn) == 13 else None,
                 "isbn10": isbn if len(isbn) == 10 else None,
-                "openlibrary_source_url": data.get('key'),
             }
         except Exception as e:
             print(f"Open Library error: {e}")
