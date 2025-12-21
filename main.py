@@ -346,7 +346,7 @@ async def update_book_route(
     await db.commit()
     return RedirectResponse("/", status_code=303)
 
-@app.get("/delete/{book_id}")
+@app.post("/delete/{book_id}")
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):
     await delete_book(db, book_id)
     return RedirectResponse("/", status_code=303)
