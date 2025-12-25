@@ -16,6 +16,7 @@
                 <div class="col-auto">
                     <label class="form-label fw-bold">Sort by</label>
                     <select name="sort" class="form-select" onchange="this.form.submit()">
+                        <option value="_" {% if current_sort == '' %}selected{% endif %}></option>    
                         <option value="title_asc" {% if current_sort == 'title_asc' %}selected{% endif %}>Title (A-Z)</option>
                         <option value="title_desc" {% if current_sort == 'title_desc' %}selected{% endif %}>Title (Z-A)</option>
                         <option value="author_asc" {% if current_sort == 'author_asc' %}selected{% endif %}>Author (A-Z)</option>

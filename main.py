@@ -53,8 +53,8 @@ async def home(
         query = query.where(Book.date_purchased <= date_purchased_to)
 
     # Apply sorting
-    sort_column = Book.title  # default
-    direction_func = asc
+    sort_column = Book.id  # default
+    direction_func = desc
 
     match sort:
         case "title_asc":
@@ -94,8 +94,8 @@ async def home(
             sort_column = Book.book_format
             direction_func = desc
         case _:
-            sort_column = Book.title
-            direction_func = asc
+            sort_column = Book.id
+            direction_func = desc
 
     # SQLite-compatible: NULLs last using CASE
     nulls_last = case(
