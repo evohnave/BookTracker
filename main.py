@@ -25,7 +25,7 @@ app.add_event_handler("startup", init_db)
 async def home(
     request: Request,
     db: AsyncSession = Depends(get_db),
-    sort: str = "title_asc",          # default sort
+    sort: str = "",                   # default sort
     format: str | None = None,        # filter by format
     publisher: str | None = None,     # filter by publisher
     date_read_from: str | None = None,
