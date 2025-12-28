@@ -1,8 +1,10 @@
 [project]
-name = "BookTracker"
+name = "booktracker"
 version = "0.1.0"
 description = "Personal book collection tracker"
-authors = [{ name = "Eric Vanhove", email = "eric.vanhove@gmail.com" }]
+authors = [{ name = "Your Name", email = "you@example.com" }]
+requires-python = ">=3.9"
+
 dependencies = [
     "fastapi",
     "uvicorn[standard]",
@@ -13,12 +15,11 @@ dependencies = [
     "python-multipart",
 ]
 
-[project.optional-dependencies]
-dev = ["ruff", "black"]
+[dependency-groups]
+dev = [
+    "ruff",
+    "black",
+]
 
 [tool.uv]
-dev-dependencies = ["ruff", "black"]
-
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+default-groups = ["dev"]  # This makes "dev" dependencies install by default with `uv sync`
