@@ -1,0 +1,24 @@
+[project]
+name = "BookTracker"
+version = "0.1.0"
+description = "Personal book collection tracker"
+authors = [{ name = "Eric Vanhove", email = "eric.vanhove@gmail.com" }]
+dependencies = [
+    "fastapi",
+    "uvicorn[standard]",
+    "sqlalchemy",
+    "aiosqlite",
+    "jinja2",
+    "httpx",
+    "python-multipart",
+]
+
+[project.optional-dependencies]
+dev = ["ruff", "black"]
+
+[tool.uv]
+dev-dependencies = ["ruff", "black"]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
