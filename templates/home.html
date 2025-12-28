@@ -65,7 +65,7 @@
                         <th>Purchase Price</th>
                         <th>Date Purchased</th>
                         <th>Date Read</th>
-                        <th>Comment</th>
+                        <th>Comments</th>
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -90,10 +90,12 @@
                         <td>{{ book.date_read.strftime('%Y-%m-%d') if book.date_read else '' }}</td>
                         <td>{{ book.comment or '' }}</td>
                         <td>
-                            <a href="/edit/{{ book.id }}" class="btn btn-sm btn-warning">Edit</a>
-                            <form action="/delete/{{ book.id }}" method="post" style="display:inline;">
-                                <button type="submit" class="btn btn-sm btn-danger" onclick="return confirm('Are you sure?')">Delete</button>
-                            </form>
+                            <div class="d-grid gap-4 d-md-block" style="width: fit-content;">
+                              <a href="/edit/{{ book.id }}" class="btn btn-sm btn-secondary w-100 d-block mb-2">Edit</a>
+                                <form action="/delete/{{ book.id }}" method="post" style="display:inline;">
+                                  <button type="submit" class="btn btn-sm btn-secondary w-100 d-block" onclick="return confirm('Are you sure?')">Delete</button>
+                                </form>
+                            </div>    
                         </td>
                     </tr>
                     {% endfor %}
