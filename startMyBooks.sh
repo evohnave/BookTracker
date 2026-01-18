@@ -8,4 +8,4 @@
 #  exit 1
 #fi
 
-uv run uvicorn main:app --reload
+uv run uvicorn main:app --reload &
