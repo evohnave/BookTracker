@@ -21,6 +21,11 @@ templates = Jinja2Templates(directory="templates")
 
 app.add_event_handler("startup", init_db)
 
+# Trying to get rid of the favicon.ico error
+@app.get("/favicon.ico", include_in_schema=False)
+async def favicon():
+    return FileResponse("static/favicon.ico")
+
 @app.get("/")
 async def home(
     request: Request,
