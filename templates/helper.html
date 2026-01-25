@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+    <title>ISBN Link Generator</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 20px;
+            background: #f9f9f9;
+            color: #333;
+        }
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border: 2px solid #ddd;
+            border-radius: 6px;
+            box-sizing: border-box;
+            margin-bottom: 20px;
+        }
+        input[type="text"]:focus {
+            outline: none;
+            border-color: #3498db;
+            box-shadow: 0 0 0 3px rgba(52,152,219,0.15);
+        }
+        button {
+            background: #3498db;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            font-size: 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+        button:hover {
+            background: #2980b9;
+        }
+        #results {
+            margin-top: 30px;
+            display: none;
+        }
+        .link-item {
+            margin: 16px 0;
+            font-size: 17px;
+        }
+        .link-item a {
+            color: #2c3e50;
+            text-decoration: none;
+            font-weight: 500;
+            border-bottom: 2px solid #3498db;
+            padding-bottom: 2px;
+            transition: all 0.2s;
+        }
+        .link-item a:hover {
+            color: #3498db;
+            border-bottom-color: transparent;
+        }
+        .label {
+            font-weight: bold;
+            color: #555;
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>ISBN Link Generator</h1>
+
+    <div class="container">
+        <label for="isbn">Enter ISBN (10 or 13 digits):</label>
+        <input type="text" id="isbn" placeholder="e.g. 9780140328721 or 0140328726" autocomplete="off">
+
+        <button onclick="generateLinks()">Generate Links</button>
+
+        <div id="results">
+            <div class="link-item">
+                <span class="label">OpenLibrary:</span>
+                <a id="openlibrary-link" href="#" target="_blank">https://openlibrary.org/isbn/...</a>
+            </div>
+            <div class="link-item">
+                <span class="label">Google Books:</span>
+                <a id="googlebooks-link" href="#" target="_blank">https://www.googleapis.com/books/v1/volumes?q=isbn:...</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function generateLinks() {
+            const isbnInput = document.getElementById('isbn').value.trim();
+            const resultsDiv = document.getElementById('results');
+            
+            // Remove any non-digit or non-X characters (very basic cleanup)
+            const cleanIsbn = isbnInput.replace(/[^0-9X]/gi, '');
+            
+            if (cleanIsbn.length === 0) {
+                alert('Please enter an ISBN');
+                return;
+            }
+
+            // Build URLs
+            const openLibUrl = `https://openlibrary.org/isbn/${cleanIsbn}.json`;
+            const googleUrl  = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`;
+
+            // Update links
+            document.getElementById('openlibrary-link').href = openLibUrl;
+            document.getElementById('openlibrary-link').textContent = openLibUrl;
+            
+            document.getElementById('googlebooks-link').href = googleUrl;
+            document.getElementById('googlebooks-link').textContent = googleUrl;
+
+            // Show results
+            resultsDiv.style.display = 'block';
+        }
+
+        // Optional: generate links when pressing Enter
+        document.getElementById('isbn').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                generateLinks();
+            }
+        });
+    </script>
+
+</body>
+</html>
