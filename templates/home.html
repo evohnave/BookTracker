@@ -85,9 +85,11 @@
                         <td>{{ book.publisher or '' }}</td>
                         <td>{{ book.pages or '' }}</td>
                         <td>{{ book.isbn13 or '' }}</td>
-                        <td>{{ '$' + book.purchase_price|string if book.purchase_price else '--------' }}</td>
-                        <td>{{ book.date_purchased.strftime('%Y-%m-%d') if book.date_purchased else '' }}</td>
-                        <td>{{ book.date_read.strftime('%Y-%m-%d') if book.date_read else '' }}</td>
+                        <td td style="text-align: right; white-space: nowrap;">
+                            {{ '$' + book.purchase_price|string if book.purchase_price else '--------' }}
+                        </td>
+                        <td>{{ book.date_purchased.strftime('%m/%d/%y') if book.date_purchased else '' }}</td>
+                        <td>{{ book.date_read.strftime('%m/%d/%y') if book.date_read else '' }}</td>
                         <td>{{ book.comment or '' }}</td>
                         <td>
                             <div class="d-grid gap-4 d-md-block" style="width: fit-content;">

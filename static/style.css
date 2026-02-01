@@ -1,1 +1,6 @@
 body { font-family: system-ui; background: #f9f9f9; }
+.currency {
+  text-align: right;
+  white-space: no-wrap;
+  padding-right: 1rem;
+}
