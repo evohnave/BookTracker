@@ -120,6 +120,10 @@
                 <span class="label">Google Books:</span>
                 <a id="googlebooks-link" href="#" target="_blank">https://www.googleapis.com/books/v1/volumes?q=isbn:...</a>
             </div>
+            <div class="link-item">
+                <span class="label">Library Of Congress:</span>
+                <a id="loc-link" href="#" target="_blank">https://lx2.loc.gov:210/lcdb?version...</a>
+            </div>
         </div>
     </div>
 
@@ -137,12 +141,16 @@
 
             const openLibUrl = `https://openlibrary.org/isbn/${cleanIsbn}.json`;
             const googleUrl  = `https://www.googleapis.com/books/v1/volumes?q=isbn:${cleanIsbn}`;
-
+            const locUrl     = `http://lx2.loc.gov:210/lcdb?version=1.1&operation=searchRetrieve&query=bath.isbn=:${cleanIsbn}&maximumRecords=1&recordSchema=mods`;
+                            
             document.getElementById('openlibrary-link').href = openLibUrl;
             document.getElementById('openlibrary-link').textContent = openLibUrl;
             
             document.getElementById('googlebooks-link').href = googleUrl;
             document.getElementById('googlebooks-link').textContent = googleUrl;
+
+            document.getElementById('loc-link').href = locUrl;
+            document.getElementById('loc-link').textContent = locUrl;
 
             resultsDiv.style.display = 'block';
         }
