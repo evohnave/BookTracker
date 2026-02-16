@@ -42,6 +42,45 @@ CREATE TABLE IF NOT EXISTS books (
 );
 """
 
+CREATE_FAKE_ISBN13 = """
+CREATE TABLE IF NOT EXISTS fake_isbn13 (
+    registrant_publication INTEGER PRIMARY KEY,
+    isbn13 TEXT GENERATED ALWAYS AS (
+        '978611' || lpad(registrant_publication::text, 6, '0') ||
+        CASE
+            WHEN (
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 1, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 2, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 3, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 4, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 5, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 6, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 7, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 8, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 9, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 10, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 11, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 12, 1))::int * 3
+            ) % 10 = 0 THEN '0'
+            ELSE (10 - (
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 1, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 2, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 3, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 4, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 5, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 6, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 7, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 8, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 9, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 10, 1))::int * 3 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 11, 1))::int * 1 +
+                (SUBSTR('978611' || lpad(registrant_publication::text, 6, '0'), 12, 1))::int * 3
+            ) % 10)::text
+        END
+    ) STORED
+);
+"""
+
 COLUMNS = [
     "title", "author", "isbn13", "isbn10", "lccn", "description",
     "cover_url", "copies", "purchase_price", "date_purchased", "date_read",
@@ -61,8 +100,9 @@ def main():
     src = sqlite3.connect(SQLITE_PATH)
     src.row_factory = sqlite3.Row
     rows = src.execute("SELECT * FROM books").fetchall()
+    fake_rows = src.execute("SELECT registrant_publication FROM fake_isbn13").fetchall()
     src.close()
-    print(f"Read {len(rows)} books from {SQLITE_PATH}")
+    print(f"Read {len(rows)} books and {len(fake_rows)} fake_isbn13 rows from {SQLITE_PATH}")
 
     # --- Write to PostgreSQL ---
     dst = psycopg2.connect(**PG_PARAMS)
@@ -80,7 +120,20 @@ def main():
 
     # Reset the sequence to the max existing id
     cur.execute("SELECT setval('books_id_seq', COALESCE((SELECT MAX(id) FROM books), 1))")
+
+    # --- Migrate fake_isbn13 ---
+    cur.execute(CREATE_FAKE_ISBN13)
+    fake_inserted = 0
+    for row in fake_rows:
+        cur.execute(
+            "INSERT INTO fake_isbn13 (registrant_publication) VALUES (%s) ON CONFLICT DO NOTHING",
+            (row["registrant_publication"],),
+        )
+        if cur.rowcount:
+            fake_inserted += 1
+
     dst.commit()
+    print(f"Inserted {fake_inserted} fake_isbn13 rows ({len(fake_rows) - fake_inserted} skipped as duplicates)")
 
     cur.close()
     dst.close()
