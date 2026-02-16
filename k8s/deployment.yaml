@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: booktracker
+  namespace: booktracker
+  labels:
+    app: booktracker
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: booktracker
+  template:
+    metadata:
+      labels:
+        app: booktracker
+    spec:
+      containers:
+        - name: booktracker
+          image: booktracker:latest
+          imagePullPolicy: Never
+          ports:
+            - containerPort: 8000
+          env:
+            - name: BOOKTRACKERADMIN_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: booktrackeradmin-password
+                  key: password
+            - name: DATABASE_URL
+              value: postgresql+asyncpg://booktrackerAdmin:$(BOOKTRACKERADMIN_PASSWORD)@postgresql.postgres.svc.cluster.local:5432/booktrackerdb
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 5
+            periodSeconds: 30
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 8000
+            initialDelaySeconds: 3
+            periodSeconds: 10

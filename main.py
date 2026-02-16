@@ -1,10 +1,11 @@
 # main.py — FINAL, WORKING with triple lookup + proper error handling
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Form, Request, Depends, HTTPException
-from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, or_, update, delete, text, asc, desc, case
+from sqlalchemy import select, or_, update, delete, text, asc, desc
 from database import init_db, get_db
 from crud.book import get_books, add_copy_or_create, get_book, update_book, delete_book
 from services.google_books import (
@@ -15,11 +16,18 @@ from schemas import BookCreate
 from models import Book
 from services.isbn_utils import is_valid, to_isbn10, to_isbn13
 
-app = FastAPI(title="BookTracker")
+@asynccontextmanager
+async def lifespan(app):
+    await init_db()
+    yield
+
+app = FastAPI(title="BookTracker", lifespan=lifespan)
 app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
-app.add_event_handler("startup", init_db)
+@app.get("/health")
+async def health():
+    return JSONResponse({"status": "ok"})
 
 # Trying to get rid of the favicon.ico error
 @app.get("/favicon.ico", include_in_schema=False)
@@ -102,20 +110,8 @@ async def home(
             sort_column = Book.id
             direction_func = desc
 
-    # SQLite-compatible: NULLs last using CASE
-    nulls_last = case(
-        (sort_column.is_(None), 1),
-        else_=0
-    )
-
-    if direction_func == desc:
-        # For descending: sort column descending first, then nulls (which get 1 → come last)
-        sort_expr = desc(sort_column), nulls_last
-    else:
-        # For ascending: sort column ascending first, then nulls (which get 1 → come last)
-        sort_expr = sort_column, nulls_last
-
-    query = query.order_by(*sort_expr)
+    # PostgreSQL-native NULLS LAST
+    query = query.order_by(direction_func(sort_column).nulls_last())
 
     result = await db.execute(query)
     books = result.scalars().all()
@@ -355,4 +351,3 @@ async def update_book_route(
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):
     await delete_book(db, book_id)
     return RedirectResponse("/", status_code=303)
-

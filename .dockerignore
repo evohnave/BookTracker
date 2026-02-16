@@ -1,0 +1,12 @@
+.venv/
+__pycache__/
+.git/
+*.db
+migrate_add_cover.py
+migrate_add_book_details.py
+migrate_to_postgres.py
+startMyBooks.sh
+k8s/
+.claude/
+.gitignore
+.python-version

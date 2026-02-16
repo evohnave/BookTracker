@@ -1,12 +1,17 @@
+import os
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy import text
+from sqlalchemy.orm import sessionmaker, DeclarativeBase
 
-DATABASE_URL = "sqlite+aiosqlite:///Z:/books.db"
-engine = create_async_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+DATABASE_URL = os.getenv(
+    "DATABASE_URL",
+    "postgresql+asyncpg://booktrackerAdmin:booktrackeradmin@localhost:30432/booktrackerdb",
+)
+
+engine = create_async_engine(DATABASE_URL)
 AsyncSessionLocal = sessionmaker(engine, class_=AsyncSession, expire_on_commit=False)
-Base = declarative_base()
+
+class Base(DeclarativeBase):
+    pass
 
 async def get_db():
     async with AsyncSessionLocal() as session:
@@ -15,9 +20,3 @@ async def get_db():
 async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-        result = await conn.execute(text("PRAGMA table_info(books);"))
-        columns = [row[1] for row in result.fetchall()]
-        if "cover_url" not in columns:
-            await conn.execute(text("ALTER TABLE books ADD COLUMN cover_url TEXT"))
-            await conn.commit()
-
