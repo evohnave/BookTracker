@@ -1,6 +1,6 @@
 [project]
 name = "booktracker"
-version = "1.1.0"
+version = "1.1.1"
 description = "Personal book collection tracker"
 authors = [{ name = "Your Name", email = "you@example.com" }]
 requires-python = ">=3.9"
