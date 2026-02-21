@@ -347,6 +347,69 @@ async def update_book_route(
     await db.commit()
     return RedirectResponse("/", status_code=303)
 
+@app.post("/add_manual")
+async def add_manual(
+    title: str = Form(...),
+    author: str = Form(...),
+    isbn13: str = Form(""),
+    isbn10: str = Form(""),
+    lccn: str = Form(""),
+    copies: int = Form(1),
+    cover_url: str = Form(""),
+    purchase_price: str = Form(""),
+    date_purchased: str = Form(""),
+    date_read: str = Form(""),
+    comment: str = Form(""),
+    db: AsyncSession = Depends(get_db)
+):
+    from decimal import Decimal
+    from datetime import date
+
+    # Clean and validate ISBNs if provided
+    isbn13_clean = ""
+    isbn10_clean = ""
+
+    if isbn13.strip():
+        cleaned = isbn13.replace("-", "").replace(" ", "")
+        if is_valid(cleaned):
+            isbn13_clean = cleaned
+
+    if isbn10.strip():
+        cleaned = isbn10.replace("-", "").replace(" ", "")
+        if is_valid(cleaned):
+            isbn10_clean = cleaned
+
+    if isbn13_clean and not isbn10_clean:
+        derived = to_isbn10(isbn13_clean)
+        if derived:
+            isbn10_clean = derived
+
+    if isbn10_clean and not isbn13_clean:
+        derived = to_isbn13(isbn10_clean)
+        if derived:
+            isbn13_clean = derived
+
+    price = Decimal(purchase_price) if purchase_price else None
+    purchased = date.fromisoformat(date_purchased) if date_purchased else None
+    read = date.fromisoformat(date_read) if date_read else None
+
+    book_data = BookCreate(
+        title=title,
+        author=author,
+        isbn13=isbn13_clean or None,
+        isbn10=isbn10_clean or None,
+        lccn=lccn or None,
+        copies=max(1, copies),
+        cover_url=cover_url or None,
+        purchase_price=price,
+        date_purchased=purchased,
+        date_read=read,
+        comment=comment or None,
+    )
+
+    await add_copy_or_create(db, book_data)
+    return RedirectResponse("/", status_code=303)
+
 @app.post("/delete/{book_id}")
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):
     await delete_book(db, book_id)

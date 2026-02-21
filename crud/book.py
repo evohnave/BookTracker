@@ -40,8 +40,10 @@ async def add_copy_or_create(db: AsyncSession, book_data: BookCreate) -> Book:
         await db.refresh(existing)
         return existing
     else:
-        new_book = Book(**book_data.model_dump(exclude_unset=True))
-        new_book.copies = 1
+        data = book_data.model_dump(exclude_unset=True)
+        if "copies" not in data:
+            data["copies"] = 1
+        new_book = Book(**data)
         db.add(new_book)
         await db.commit()
         await db.refresh(new_book)
