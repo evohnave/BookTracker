@@ -33,7 +33,7 @@
     <h3>Or Add Manually</h3>
     <p><label>Title:</label>      <input name="title" size="70" required value="{{ query.title or '' }}"></p>
     <p><label>Author:</label>     <input name="author" size="70" required value="{{ query.author or '' }}"></p>
-    <p><label>ISBN-13:</label>    <input name="isbn13" size="20"></p>
+    <p><label>ISBN-13:</label>    <input id="isbn13" name="isbn13" size="20"> <button type="button" id="gen-isbn13">Generate</button></p>
     <p><label>ISBN-10:</label>    <input name="isbn10" size="20"></p>
     <p><label>LCCN:</label>       <input name="lccn" size="20" value="{{ query.lccn or '' }}"></p>
     <p><label>Copies:</label>     <input name="copies" type="number" min="1" value="1" required></p>
@@ -50,6 +50,19 @@
     <a href="/">Cancel</a>
 </form>
 <script>
+    document.getElementById('gen-isbn13').addEventListener('click', async function() {
+        this.disabled = true;
+        this.textContent = 'Generating…';
+        try {
+            const res = await fetch('/next_fake_isbn13', {method: 'POST'});
+            const data = await res.json();
+            document.getElementById('isbn13').value = data.isbn13;
+        } finally {
+            this.disabled = false;
+            this.textContent = 'Generate';
+        }
+    });
+
     document.querySelector("form[action='/lookup']").addEventListener("submit", function(e) {
         const isbn = this.querySelector("input[name='isbn']").value;
         if (isbn.trim() === '') return;  // Skip if empty
