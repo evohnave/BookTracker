@@ -412,12 +412,14 @@ async def add_manual(
 
 @app.post("/next_fake_isbn13")
 async def next_fake_isbn13(db: AsyncSession = Depends(get_db)):
-    result = await db.execute(text("SELECT COALESCE(MAX(registrant_publication), 0) FROM fake_isbn13"))
-    next_val = result.scalar() + 1
-    await db.execute(text("INSERT INTO fake_isbn13 (registrant_publication) VALUES (:val)"), {"val": next_val})
+    result = await db.execute(text(
+        "INSERT INTO fake_isbn13 (registrant_publication) "
+        "SELECT COALESCE(MAX(registrant_publication), 0) + 1 FROM fake_isbn13 "
+        "RETURNING registrant_publication, isbn13"
+    ))
     await db.commit()
-    result = await db.execute(text("SELECT isbn13 FROM fake_isbn13 WHERE registrant_publication = :val"), {"val": next_val})
-    return JSONResponse({"isbn13": result.scalar(), "registrant_publication": next_val})
+    row = result.fetchone()
+    return JSONResponse({"isbn13": row.isbn13, "registrant_publication": row.registrant_publication})
 
 @app.post("/delete/{book_id}")
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):

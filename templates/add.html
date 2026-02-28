@@ -55,6 +55,7 @@
         this.textContent = 'Generating…';
         try {
             const res = await fetch('/next_fake_isbn13', {method: 'POST'});
+            if (!res.ok) throw new Error('Server error');
             const data = await res.json();
             document.getElementById('isbn13').value = data.isbn13;
         } finally {
