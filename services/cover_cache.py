@@ -55,7 +55,13 @@ async def download_and_cache_bg(
             pass
 
     if not downloaded:
-        shutil.copy(NO_COVER_SRC, dest)
+        if cover_url:
+            # Download failed but cover_url exists — don't cache a placeholder.
+            # Leave local_cover_path as None so the browser loads cover_url directly.
+            url_path = None
+        else:
+            # No cover_url at all — store the placeholder so something shows.
+            shutil.copy(NO_COVER_SRC, dest)
 
     async with AsyncSessionLocal() as db:
         await db.execute(

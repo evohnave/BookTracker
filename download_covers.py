@@ -88,10 +88,15 @@ async def main(force: bool = False) -> None:
             if book.cover_url:
                 success = await download_single(client, book.cover_url, dest)
                 if not success:
-                    print(f"    Download failed, using placeholder")
+                    print(f"    Download failed — browser fallback will be used")
 
             if not success:
-                shutil.copy(NO_COVER_SRC, dest)
+                if book.cover_url:
+                    # cover_url exists but download failed; leave local_cover_path
+                    # as None so the browser loads cover_url directly.
+                    url_path = None
+                else:
+                    shutil.copy(NO_COVER_SRC, dest)
 
             async with AsyncSessionLocal() as db:
                 await db.execute(
