@@ -29,6 +29,9 @@ spec:
                   key: password
             - name: DATABASE_URL
               value: postgresql+asyncpg://booktrackerAdmin:$(BOOKTRACKERADMIN_PASSWORD)@postgresql.postgres.svc.cluster.local:5432/booktrackerdb
+          volumeMounts:
+            - name: covers-pv
+              mountPath: /app/static/covers
           livenessProbe:
             httpGet:
               path: /health
@@ -41,3 +44,7 @@ spec:
               port: 8000
             initialDelaySeconds: 3
             periodSeconds: 10
+      volumes:
+        - name: covers-pv
+          persistentVolumeClaim:
+            claimName: booktracker-covers-pvc

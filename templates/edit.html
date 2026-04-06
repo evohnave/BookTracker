@@ -2,17 +2,27 @@
 <html>
 <head>
     <title>Edit Book - BookTracker</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {font-family:system-ui;margin:40px;background:#f9f9f9;}
-        label {display:inline-block;width:160px;font-weight:bold;}
+        label {display:inline-block;width:180px;font-weight:bold;}
         input, textarea {padding:8px;width:400px;border-radius:6px;border:1px solid #ccc;}
         button {padding:10px 20px;font-size:16px;margin-top:20px;}
+        .readonly-field {padding:8px;width:400px;background:#e9ecef;border-radius:6px;border:1px solid #ccc;display:inline-block;word-break:break-all;}
+        dialog {border-radius:8px;border:1px solid #ccc;padding:24px;max-width:700px;box-shadow:0 8px 32px rgba(0,0,0,0.2);}
+        dialog::backdrop {background:rgba(0,0,0,0.5);}
+        .cover-compare {display:flex;gap:32px;margin:16px 0;}
+        .cover-compare div {text-align:center;}
+        .cover-compare img {width:150px;height:220px;object-fit:contain;border:1px solid #ccc;background:#f0f0f0;}
+        .dialog-buttons {display:flex;gap:12px;margin-top:16px;justify-content:flex-end;}
     </style>
 </head>
 <body>
 <h1>Edit: {{ book.title }}</h1>
 
-<form method="post">
+<form method="post" id="edit-form">
+    <input type="hidden" name="update_local_cover" id="update_local_cover" value="false">
+
     <p><label>Title:</label>     <input name="title" value="{{ book.title }}" required></p>
     <p><label>Author:</label>    <input name="author" value="{{ book.author }}" required></p>
     <p><label>ISBN-13:</label>   <input name="isbn13" value="{{ book.isbn13 or '' }}"></p>
@@ -20,8 +30,14 @@
     <p><label>LCCN:</label>      <input name="lccn" value="{{ book.lccn or '' }}"></p>
     <p><label>Copies:</label>    <input name="copies" type="number" min="1" value="{{ book.copies }}" required></p>
 
-    <!-- NEW: Cover URL field -->
-    <p><label>Cover URL:</label> <input name="cover_url" value="{{ book.cover_url or '' }}" size="70" placeholder="https://example.com/cover.jpg"></p>
+    <p>
+        <label>Cover URL:</label>
+        <input name="cover_url" id="cover_url" value="{{ book.cover_url or '' }}" size="70" placeholder="https://example.com/cover.jpg">
+    </p>
+    <p>
+        <label>Local Cover Path:</label>
+        <span class="readonly-field">{{ book.local_cover_path or '(not yet cached)' }}</span>
+    </p>
 
     <hr>
     <h3>Personal Info</h3>
@@ -70,8 +86,54 @@
     <input type="text" name="daw_catalog_number" id="daw_catalog_number" maxlength="6" value="{{ book.daw_catalog_number or '' }}">
 </div>
 
-    <button type="submit">Save Changes</button>
+    <button type="submit" id="save-btn">Save Changes</button>
     <a href="/">Cancel</a>
 </form>
+
+<!-- Cover comparison dialog -->
+<dialog id="cover-dialog">
+    <h3>Cover Image Changed</h3>
+    <p>Do you want to update the local cached copy with the new cover?</p>
+    <div class="cover-compare">
+        <div>
+            <p><strong>Current local cover</strong></p>
+            <img id="old-cover-img" src="" alt="Current cover">
+        </div>
+        <div>
+            <p><strong>New cover URL</strong></p>
+            <img id="new-cover-img" src="" alt="New cover">
+        </div>
+    </div>
+    <div class="dialog-buttons">
+        <button type="button" class="btn btn-secondary" id="cancel-update">Cancel — make no changes</button>
+        <button type="button" class="btn btn-primary" id="confirm-update">Yes, update local copy</button>
+    </div>
+</dialog>
+
+<script>
+    const coverInput = document.getElementById('cover_url');
+    const originalUrl = coverInput.value;
+    const currentLocal = {{ ('"' + book.local_cover_path + '"') | safe if book.local_cover_path else '"' + ('/static/no-cover.jpg') + '"' | safe }};
+
+    document.getElementById('edit-form').addEventListener('submit', function(e) {
+        const newUrl = coverInput.value.trim();
+        if (newUrl !== originalUrl) {
+            e.preventDefault();
+            document.getElementById('old-cover-img').src = currentLocal;
+            document.getElementById('new-cover-img').src = newUrl || '/static/no-cover.jpg';
+            document.getElementById('cover-dialog').showModal();
+        }
+    });
+
+    document.getElementById('confirm-update').addEventListener('click', function() {
+        document.getElementById('update_local_cover').value = 'true';
+        document.getElementById('cover-dialog').close();
+        document.getElementById('edit-form').submit();
+    });
+
+    document.getElementById('cancel-update').addEventListener('click', function() {
+        document.getElementById('cover-dialog').close();
+    });
+</script>
 </body>
 </html>

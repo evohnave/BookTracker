@@ -73,10 +73,13 @@
                     {% for book in books %}
                     <tr>
                         <td>
-                            {% if book.cover_url %}
+                            {% if book.local_cover_path %}
+                            <img src="{{ book.local_cover_path }}" alt="Cover" class="img-thumbnail" style="width: 80px;"
+                                 onerror="this.onerror=null;this.src='{{ book.cover_url or '/static/no-cover.jpg' }}'">
+                            {% elif book.cover_url %}
                             <img src="{{ book.cover_url }}" alt="Cover" class="img-thumbnail" style="width: 80px;">
                             {% else %}
-                            <div class="bg-secondary border" style="width: 80px; height: 120px;"></div>
+                            <img src="/static/no-cover.jpg" alt="No Cover" class="img-thumbnail" style="width: 80px;">
                             {% endif %}
                         </td>
                         <td><strong>{{ book.title }}</strong></td>

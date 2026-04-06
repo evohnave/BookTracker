@@ -1,6 +1,6 @@
 # main.py — FINAL, WORKING with triple lookup + proper error handling
 from contextlib import asynccontextmanager
-from fastapi import FastAPI, Form, Request, Depends, HTTPException
+from fastapi import BackgroundTasks, FastAPI, Form, Request, Depends, HTTPException
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -15,10 +15,15 @@ from services.google_books import (
 from schemas import BookCreate
 from models import Book
 from services.isbn_utils import is_valid, to_isbn10, to_isbn13
+from services.cover_cache import (
+    COVERS_DIR, download_and_cache_bg,
+    local_cover_filepath, local_cover_url,
+)
 
 @asynccontextmanager
 async def lifespan(app):
     await init_db()
+    COVERS_DIR.mkdir(parents=True, exist_ok=True)
     yield
 
 app = FastAPI(title="BookTracker", lifespan=lifespan)
@@ -224,6 +229,7 @@ async def lookup_books(
 
 @app.post("/add_selected")
 async def add_selected(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     author: str = Form(...),
     isbn13: str = Form(""),
@@ -277,6 +283,10 @@ async def add_selected(
         <a href="/">Back to Library</a>
         """)
 
+    background_tasks.add_task(
+        download_and_cache_bg,
+        result_book.id, result_book.isbn13, result_book.lccn, cover_url or None,
+    )
     return RedirectResponse("/", status_code=303)
 
 @app.get("/edit/{book_id}", response_class=HTMLResponse)
@@ -289,6 +299,7 @@ async def edit_form(book_id: int, request: Request, db: AsyncSession = Depends(g
 @app.post("/edit/{book_id}")
 async def update_book_route(
     book_id: int,
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     author: str = Form(...),
     isbn13: str = Form(""),
@@ -296,6 +307,7 @@ async def update_book_route(
     lccn: str = Form(""),
     copies: int = Form(1),
     cover_url: str = Form(""),
+    update_local_cover: bool = Form(False),
     purchase_price: str = Form(""),
     date_purchased: str = Form(""),
     date_read: str = Form(""),
@@ -313,6 +325,8 @@ async def update_book_route(
     from decimal import Decimal
     from datetime import date
 
+    old_book = await get_book(db, book_id)
+
     price = Decimal(purchase_price) if purchase_price else None
     purchased = date.fromisoformat(date_purchased) if date_purchased else None
     read = date.fromisoformat(date_read) if date_read else None
@@ -322,12 +336,15 @@ async def update_book_route(
     pages_int = int(pages) if pages else None
     daw_num = int(daw_book_number) if daw_book_number else None
 
+    new_isbn13 = isbn13 or None
+    new_lccn = lccn or None
+
     book_data = {
         "title": title,
         "author": author,
-        "isbn13": isbn13 or None,
+        "isbn13": new_isbn13,
         "isbn10": isbn10 or None,
-        "lccn": lccn or None,
+        "lccn": new_lccn,
         "copies": max(1, copies),
         "cover_url": cover_url or None,
         "purchase_price": price,
@@ -345,10 +362,32 @@ async def update_book_route(
     }
     await db.execute(update(Book).where(Book.id == book_id).values(**book_data))
     await db.commit()
+
+    # If user confirmed a cover URL change, re-download to local storage
+    if update_local_cover:
+        background_tasks.add_task(
+            download_and_cache_bg,
+            book_id, new_isbn13, new_lccn, cover_url or None,
+        )
+    elif not old_book.isbn13 and new_isbn13:
+        # isbn13 assigned for the first time — rename existing local file if present
+        old_path = local_cover_filepath(None, old_book.lccn)
+        new_path = local_cover_filepath(new_isbn13, new_lccn)
+        new_url = local_cover_url(new_isbn13, new_lccn)
+        if old_path and old_path.exists() and new_path:
+            COVERS_DIR.mkdir(parents=True, exist_ok=True)
+            old_path.rename(new_path)
+        if new_url:
+            await db.execute(
+                update(Book).where(Book.id == book_id).values(local_cover_path=new_url)
+            )
+            await db.commit()
+
     return RedirectResponse("/", status_code=303)
 
 @app.post("/add_manual")
 async def add_manual(
+    background_tasks: BackgroundTasks,
     title: str = Form(...),
     author: str = Form(...),
     isbn13: str = Form(""),
@@ -407,7 +446,12 @@ async def add_manual(
         comment=comment or None,
     )
 
-    await add_copy_or_create(db, book_data)
+    result_book = await add_copy_or_create(db, book_data)
+    if result_book.copies == 1:
+        background_tasks.add_task(
+            download_and_cache_bg,
+            result_book.id, result_book.isbn13, result_book.lccn, cover_url or None,
+        )
     return RedirectResponse("/", status_code=303)
 
 @app.post("/next_fake_isbn13")

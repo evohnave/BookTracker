@@ -11,6 +11,7 @@ class BookBase(BaseModel):
     lccn: Optional[str] = None
     description: Optional[str] = None
     cover_url: Optional[str] = None
+    local_cover_path: Optional[str] = None
 
 class BookCreate(BookBase):
     copies: Optional[int] = None

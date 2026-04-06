@@ -24,4 +24,5 @@ class Book(Base):
     pages = Column(Integer, nullable=True)
     dimensions = Column(String(50), nullable=True)
     book_format = Column(String(100), nullable=True)
+    local_cover_path = Column(String, nullable=True)
 
