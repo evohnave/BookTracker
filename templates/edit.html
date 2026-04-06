@@ -36,7 +36,11 @@
     </p>
     <p>
         <label>Local Cover Path:</label>
-        <span class="readonly-field">{{ book.local_cover_path or '(not yet cached)' }}</span>
+        <span class="readonly-field" id="local-cover-path-display">{{ book.local_cover_path or '(not yet cached)' }}</span>
+        <button type="button" id="refresh-cover-btn" class="btn btn-sm btn-outline-secondary ms-2" onclick="refreshCover()">&#8635; Refresh Cache</button>
+        <button type="button" class="btn btn-sm btn-outline-secondary ms-1" onclick="document.getElementById('cover-upload-input').click()">&#8679; Upload Image</button>
+        <input type="file" id="cover-upload-input" accept="image/*" style="display:none" onchange="uploadCover(this)">
+        <span id="refresh-status" style="margin-left:8px;font-size:0.9em;"></span>
     </p>
 
     <hr>
@@ -113,7 +117,7 @@
 <script>
     const coverInput = document.getElementById('cover_url');
     const originalUrl = coverInput.value;
-    const currentLocal = {{ ('"' + book.local_cover_path + '"') | safe if book.local_cover_path else '"' + ('/static/no-cover.jpg') + '"' | safe }};
+    const currentLocal = '{{ book.local_cover_path or "/static/no-cover.jpg" }}';
 
     document.getElementById('edit-form').addEventListener('submit', function(e) {
         const newUrl = coverInput.value.trim();
@@ -134,6 +138,57 @@
     document.getElementById('cancel-update').addEventListener('click', function() {
         document.getElementById('cover-dialog').close();
     });
+
+    async function uploadCover(input) {
+        if (!input.files || !input.files[0]) return;
+        const status = document.getElementById('refresh-status');
+        status.textContent = 'Uploading…';
+        status.style.color = '';
+        const formData = new FormData();
+        formData.append('file', input.files[0]);
+        try {
+            const resp = await fetch('/upload_cover/{{ book.id }}', {method: 'POST', body: formData});
+            const data = await resp.json();
+            if (data.success) {
+                document.getElementById('local-cover-path-display').textContent = data.local_cover_path;
+                status.textContent = '✓ ' + data.message;
+                status.style.color = 'green';
+            } else {
+                status.textContent = '✗ ' + data.message;
+                status.style.color = 'red';
+            }
+        } catch (e) {
+            status.textContent = '✗ Upload failed';
+            status.style.color = 'red';
+        }
+        input.value = '';
+    }
+
+    async function refreshCover() {
+        const btn = document.getElementById('refresh-cover-btn');
+        const status = document.getElementById('refresh-status');
+        btn.disabled = true;
+        btn.textContent = 'Downloading…';
+        status.textContent = '';
+        status.style.color = '';
+        try {
+            const resp = await fetch('/refresh_cover/{{ book.id }}', {method: 'POST'});
+            const data = await resp.json();
+            if (data.success) {
+                document.getElementById('local-cover-path-display').textContent = data.local_cover_path;
+                status.textContent = '✓ ' + data.message;
+                status.style.color = 'green';
+            } else {
+                status.textContent = '✗ ' + data.message;
+                status.style.color = 'red';
+            }
+        } catch (e) {
+            status.textContent = '✗ Request failed';
+            status.style.color = 'red';
+        }
+        btn.disabled = false;
+        btn.textContent = '↻ Refresh Cache';
+    }
 </script>
 </body>
 </html>

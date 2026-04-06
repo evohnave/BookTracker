@@ -1,11 +1,24 @@
 import shutil
 from pathlib import Path
+from urllib.parse import urlparse
 
 import httpx
 from sqlalchemy import update
 
 COVERS_DIR = Path("static/covers")
 NO_COVER_SRC = Path("static/no-cover.jpg")
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+    "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+    "Accept-Language": "en-US,en;q=0.9",
+}
+
+
+def _headers_for(url: str) -> dict:
+    """Return browser headers with a Referer set to the URL's own origin."""
+    parsed = urlparse(url)
+    referer = f"{parsed.scheme}://{parsed.netloc}/"
+    return {**BROWSER_HEADERS, "Referer": referer}
 
 
 def cover_identifier(isbn13: str | None, lccn: str | None) -> str | None:
@@ -39,14 +52,10 @@ async def download_and_cache_bg(
 
     COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
-    BROWSER_HEADERS = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
-    }
-
     downloaded = False
     if cover_url:
         try:
-            async with httpx.AsyncClient(timeout=10, headers=BROWSER_HEADERS) as client:
+            async with httpx.AsyncClient(timeout=10, headers=_headers_for(cover_url)) as client:
                 resp = await client.get(cover_url, follow_redirects=True)
                 if resp.status_code == 200 and len(resp.content) > 0:
                     dest.write_bytes(resp.content)
@@ -68,3 +77,33 @@ async def download_and_cache_bg(
             update(Book).where(Book.id == book_id).values(local_cover_path=url_path)
         )
         await db.commit()
+
+
+async def download_cover_now(
+    isbn13: str | None,
+    lccn: str | None,
+    cover_url: str | None,
+) -> tuple[bool, str | None, str]:
+    """
+    Immediately download a cover. Returns (success, url_path, message).
+    Does NOT update the database — caller handles that.
+    """
+    dest = local_cover_filepath(isbn13, lccn)
+    url_path = local_cover_url(isbn13, lccn)
+
+    if dest is None:
+        return False, None, "No isbn13 or lccn — cannot determine filename"
+    if not cover_url:
+        return False, None, "No cover URL to download from"
+
+    COVERS_DIR.mkdir(parents=True, exist_ok=True)
+
+    try:
+        async with httpx.AsyncClient(timeout=15, headers=_headers_for(cover_url)) as client:
+            resp = await client.get(cover_url, follow_redirects=True)
+            if resp.status_code == 200 and len(resp.content) > 0:
+                dest.write_bytes(resp.content)
+                return True, url_path, "Downloaded successfully"
+            return False, None, f"Server returned HTTP {resp.status_code}"
+    except Exception as e:
+        return False, None, str(e)

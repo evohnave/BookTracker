@@ -1,6 +1,6 @@
 # main.py — FINAL, WORKING with triple lookup + proper error handling
 from contextlib import asynccontextmanager
-from fastapi import BackgroundTasks, FastAPI, Form, Request, Depends, HTTPException
+from fastapi import BackgroundTasks, FastAPI, File, Form, Request, Depends, HTTPException, UploadFile
 from fastapi.responses import HTMLResponse, RedirectResponse, FileResponse, JSONResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
@@ -17,7 +17,7 @@ from models import Book
 from services.isbn_utils import is_valid, to_isbn10, to_isbn13
 from services.cover_cache import (
     COVERS_DIR, download_and_cache_bg,
-    local_cover_filepath, local_cover_url,
+    local_cover_filepath, local_cover_url, download_cover_now,
 )
 
 @asynccontextmanager
@@ -464,6 +464,47 @@ async def next_fake_isbn13(db: AsyncSession = Depends(get_db)):
     await db.commit()
     row = result.fetchone()
     return JSONResponse({"isbn13": row.isbn13, "registrant_publication": row.registrant_publication})
+
+@app.post("/upload_cover/{book_id}")
+async def upload_cover(book_id: int, file: UploadFile = File(...), db: AsyncSession = Depends(get_db)):
+    book = await get_book(db, book_id)
+    if not book:
+        raise HTTPException(404, "Book not found")
+
+    dest = local_cover_filepath(book.isbn13, book.lccn)
+    url_path = local_cover_url(book.isbn13, book.lccn)
+
+    if dest is None:
+        return JSONResponse({"success": False, "message": "No isbn13 or lccn — cannot determine filename"})
+
+    COVERS_DIR.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(await file.read())
+
+    await db.execute(update(Book).where(Book.id == book_id).values(local_cover_path=url_path))
+    await db.commit()
+
+    return JSONResponse({"success": True, "local_cover_path": url_path, "message": "Uploaded successfully"})
+
+
+@app.post("/refresh_cover/{book_id}")
+async def refresh_cover(book_id: int, db: AsyncSession = Depends(get_db)):
+    book = await get_book(db, book_id)
+    if not book:
+        raise HTTPException(404, "Book not found")
+
+    success, url_path, message = await download_cover_now(
+        book.isbn13, book.lccn, book.cover_url
+    )
+
+    if success:
+        await db.execute(
+            update(Book).where(Book.id == book_id).values(local_cover_path=url_path)
+        )
+        await db.commit()
+        return JSONResponse({"success": True, "local_cover_path": url_path, "message": message})
+
+    return JSONResponse({"success": False, "local_cover_path": None, "message": message})
+
 
 @app.post("/delete/{book_id}")
 async def delete_book_route(book_id: int, db: AsyncSession = Depends(get_db)):
