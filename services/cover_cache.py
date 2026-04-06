@@ -39,10 +39,14 @@ async def download_and_cache_bg(
 
     COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
+    BROWSER_HEADERS = {
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+    }
+
     downloaded = False
     if cover_url:
         try:
-            async with httpx.AsyncClient(timeout=10) as client:
+            async with httpx.AsyncClient(timeout=10, headers=BROWSER_HEADERS) as client:
                 resp = await client.get(cover_url, follow_redirects=True)
                 if resp.status_code == 200 and len(resp.content) > 0:
                     dest.write_bytes(resp.content)

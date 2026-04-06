@@ -30,6 +30,11 @@ from services.cover_cache import (
 )
 
 
+BROWSER_HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
+}
+
+
 async def download_single(client: httpx.AsyncClient, url: str, dest: Path) -> bool:
     try:
         resp = await client.get(url, follow_redirects=True, timeout=15)
@@ -55,7 +60,7 @@ async def main(force: bool = False) -> None:
     skipped = 0
     failed = 0
 
-    async with httpx.AsyncClient() as client:
+    async with httpx.AsyncClient(headers=BROWSER_HEADERS) as client:
         for book in books:
             dest = local_cover_filepath(book.isbn13, book.lccn)
             url_path = local_cover_url(book.isbn13, book.lccn)
